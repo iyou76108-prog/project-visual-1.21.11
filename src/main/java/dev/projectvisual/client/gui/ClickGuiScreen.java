@@ -8,6 +8,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.input.MouseButtonEvent;
+import net.minecraft.client.gui.components.EditBox;
 
 public final class ClickGuiScreen extends Screen {
     private static final int BG=0xF00D0F18, SIDE=0xF0161925, CARD=0xFF1D2130, HOVER=0xFF282D40;
@@ -22,8 +23,8 @@ public final class ClickGuiScreen extends Screen {
         {"Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation"},
         {"View Model","Camera Clip","Zoom","Smooth Camera","Perspective"},
         {"Notifications","Watermark","Module List","Custom Font","Color Theme"},
-        {"Player ESP","Hitbox Visual"},
-        {"Queen Skin","Magnus AFK","Skin Manager","Skin Preview","Capes","Outfits"}
+        {"Hitboxes","Chest ESP","Player ESP","Hitbox Visual"},
+        {"Queen Skin","Invoker Skin","Magnus AFK","Axe AFK","Skin Manager","Skin Preview","Capes","Outfits"}
     };
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
@@ -33,13 +34,39 @@ public final class ClickGuiScreen extends Screen {
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
         {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
-        {"Outline nearby players","Visual-only hitbox outline"},
-        {"Turn your avatar into a 3D chess queen","Magnus Carlsen visits after 30 seconds AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"}
+        {"Expand entity targeting boxes and outline them","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
+        {"Turn your avatar into a 3D chess queen","Invoker with three rotating elemental orbs","Magnus Carlsen visits after 30 seconds AFK","Axe rushes in and swings his axe after AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"},
     };
     private int category=0, rightTab=-1, scroll=0;
     private static int language=0;
+    private EditBox accentHexBox;
 
     public ClickGuiScreen(){super(Component.literal("PROJECT VISUAL"));}
+
+    @Override
+    protected void init() {
+        super.init();
+        int pw=Math.min(1000,width-24);
+        int ph=Math.min(540,height-24);
+        int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154;
+        int mainX=x+left+16;
+        accentHexBox = new EditBox(font, mainX, y+202, 112, 20, Component.literal("Accent HEX"));
+        accentHexBox.setMaxLength(6);
+        accentHexBox.setFilter(value -> value.matches("[0-9a-fA-F]{0,6}"));
+        accentHexBox.setValue(String.format("%06X", VisualFeatures.customAccentColor() & 0x00FFFFFF));
+        accentHexBox.setResponder(value -> {
+            if (value.length() == 6) {
+                try {
+                    VisualFeatures.setCustomAccentColor(Integer.parseInt(value, 16));
+                } catch (NumberFormatException ignored) {
+                    // The edit box filter already limits input to hexadecimal characters.
+                }
+            }
+        });
+        accentHexBox.visible = rightTab == 0;
+        addRenderableWidget(accentHexBox);
+    }
+
     private String tr(String en,String ru,String kk){return language==1?ru:language==2?kk:en;}
     private String[] categories(){return language==1
         ?new String[]{"HUD","Бой","Игрок","Мир","Анимации","Камера","Интерфейс","Читы","Скины"}
@@ -48,6 +75,7 @@ public final class ClickGuiScreen extends Screen {
         :language==2?new String[]{"Баптаулар","Мини-ойындар","Достар"}:RIGHT;}
 
     @Override public void render(GuiGraphics g,int mx,int my,float tick){
+        if (accentHexBox != null) accentHexBox.visible = rightTab == 0;
         g.fill(0,0,width,height,0x99000000);
         int pw=Math.min(1000,width-24), ph=Math.min(540,height-24);
         int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154;
@@ -113,6 +141,16 @@ public final class ClickGuiScreen extends Screen {
             }
             g.drawString(font,tr("Changes apply instantly.","Изменения применяются сразу.","Өзгерістер бірден қолданылады."),x,y+128,MUTED,false);
             g.drawString(font,tr("More settings will be added later.","Другие настройки появятся позже.","Басқа баптаулар кейін қосылады."),x,y+148,MUTED,false);
+            g.drawString(font,tr("Custom visual color (HEX RGB)","Свой цвет визуалов (HEX RGB)","Визуал түсі (HEX RGB)"),x,y+176,MUTED,false);
+            g.drawString(font,"#",x+118,y+208,VisualFeatures.accentColor(),false);
+            g.fill(x+145,y+202,x+171,y+222,VisualFeatures.accentColor());
+            g.drawString(font,tr("Examples:","Примеры:","Мысалдар:"),x+184,y+208,MUTED,false);
+            int[] swatches={0xFF54D6C8,0xFF9B7BFF,0xFFFF5577,0xFFFFC857,0xFF61A8FF,0xFFFFFFFF};
+            for(int i=0;i<swatches.length;i++){
+                int sx=x+184+i*22;
+                g.fill(sx,y+222,sx+15,y+237,swatches[i]);
+                g.fill(sx,y+222,sx+15,y+223,0xFF000000);
+            }
         }else if(rightTab==1){
             g.drawString(font,tr("Minigames","Мини-игры","Мини-ойындар"),x,y+19,TEXT,false);
             int by=y+48;
@@ -140,6 +178,15 @@ public final class ClickGuiScreen extends Screen {
         if(rightTab==0){
             int mainX=x+left+16,mainW=pw-left-right-48;
             for(int i=0;i<3;i++){int bx=mainX+i*(mainW/3),by=y+78,bw=mainW/3-5;if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+30){language=i;return true;}}
+            int[] swatches={0xFF54D6C8,0xFF9B7BFF,0xFFFF5577,0xFFFFC857,0xFF61A8FF,0xFFFFFFFF};
+            for(int i=0;i<swatches.length;i++){
+                int sx=mainX+184+i*22;
+                if(mx>=sx&&mx<=sx+15&&my>=y+222&&my<=y+237){
+                    VisualFeatures.setCustomAccentColor(swatches[i]);
+                    if(accentHexBox!=null)accentHexBox.setValue(String.format("%06X",swatches[i]&0x00FFFFFF));
+                    return true;
+                }
+            }
         }else if(rightTab==1){
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
