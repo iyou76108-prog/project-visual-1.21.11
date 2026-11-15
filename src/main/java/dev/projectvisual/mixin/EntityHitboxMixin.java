@@ -21,12 +21,4 @@ public abstract class EntityHitboxMixin {
         }
     }
 
-    @Inject(method = "getBoundingBox", at = @At("RETURN"), cancellable = true)
-    private void projectvisual$expandPlayerHitbox(CallbackInfoReturnable<AABB> cir) {
-        if (VisualFeatures.isHitboxEnabled()
-                && (Object) this instanceof Player player
-                && player != Minecraft.getInstance().player) {
-            cir.setReturnValue(cir.getReturnValue().inflate(VisualFeatures.getHitboxExpansion()));
-        }
-    }
 }
