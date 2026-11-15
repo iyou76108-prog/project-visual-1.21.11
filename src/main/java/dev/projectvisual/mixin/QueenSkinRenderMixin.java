@@ -32,8 +32,9 @@ public abstract class QueenSkinRenderMixin {
             CallbackInfo ci
     ) {
         Minecraft client = Minecraft.getInstance();
-        if (VisualFeatures.isEnabled("Queen Skin")
+        if ((VisualFeatures.isEnabled("Queen Skin") || VisualFeatures.isEnabled("Invoker Skin"))
                 && client.player != null
+                && !client.options.getCameraType().isFirstPerson()
                 && state instanceof AvatarRenderState avatar
                 && avatar.id == client.player.getId()) {
             ci.cancel();
