@@ -2,6 +2,7 @@ package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
+import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -34,7 +35,7 @@ public final class ClickGuiScreen extends Screen {
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
         {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
-        {"Expand entity targeting boxes and outline them","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
+        {"Meteor-style player targeting expansion (+0.5)","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
         {"Turn your avatar into a 3D chess queen","Invoker with three rotating elemental orbs","Magnus Carlsen visits after 30 seconds AFK","Axe rushes in and swings his axe after AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"},
     };
     private int category=0, rightTab=-1, scroll=0;
@@ -191,6 +192,11 @@ public final class ClickGuiScreen extends Screen {
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
                 ChessWorldGame.start();
+                Minecraft.getInstance().setScreen(null);
+                return true;
+            }
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=by+88&&my<=by+164){
+                MinesweeperWorldGame.start();
                 Minecraft.getInstance().setScreen(null);
                 return true;
             }
