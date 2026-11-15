@@ -9,6 +9,14 @@
     "ClientWorldVisualMixin",
     "ZoomMixin",
     "MouseClickMixin"
+  ,
+    "CameraClipMixin"
+  ,
+    "ItemPhysicsMixin"
+  ,
+    "FirstPersonVisualMixin"
+  ,
+    "PlayerNameTagsMixin"
   ],
   "injectors": { "defaultRequire": 1 }
 }
