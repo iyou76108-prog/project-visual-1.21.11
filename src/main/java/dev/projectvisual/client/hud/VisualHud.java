@@ -11,7 +11,6 @@ import net.minecraft.world.item.ItemStack;
 import java.util.Map;
 import java.util.ArrayDeque;
 import java.util.Deque;
-import org.lwjgl.glfw.GLFW;
 
 public final class VisualHud {
     private static final int PANEL=0xC910121B, ACCENT=0xFF9B7BFF, TEXT=0xFFF3F0FF, MUTED=0xFFAAA6BA;
@@ -19,9 +18,8 @@ public final class VisualHud {
     private static final Deque<Long> leftClicks=new ArrayDeque<>(), rightClicks=new ArrayDeque<>();
     private static boolean lastLeft=false,lastRight=false;
     private static void sampleClicks(Minecraft mc) {
-        long window=mc.getWindow().getWindow();
-        boolean left=GLFW.glfwGetMouseButton(window,GLFW.GLFW_MOUSE_BUTTON_LEFT)==GLFW.GLFW_PRESS;
-        boolean right=GLFW.glfwGetMouseButton(window,GLFW.GLFW_MOUSE_BUTTON_RIGHT)==GLFW.GLFW_PRESS;
+        boolean left=mc.options.keyAttack.isDown();
+        boolean right=mc.options.keyUse.isDown();
         long now=System.currentTimeMillis();
         if(left&&!lastLeft)leftClicks.addLast(now);
         if(right&&!lastRight)rightClicks.addLast(now);
@@ -69,7 +67,8 @@ public final class VisualHud {
         if(VisualFeatures.isEnabled("Target HUD")||VisualFeatures.isEnabled("Target Info")){
             var target=mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit ? hit.getEntity() : null;
             if(target!=null && target.isAlive()){
-                String label=target.getName().getString()+"  "+String.format(java.util.Locale.ROOT,"%.1f",target.getHealth())+" HP";
+                String label=target.getName().getString();
+                if(target instanceof net.minecraft.world.entity.LivingEntity living) label += "  "+String.format(java.util.Locale.ROOT,"%.1f",living.getHealth())+" HP";
                 if(VisualFeatures.isEnabled("Target HUD")){line(g,mc,"TARGET  "+label,x,yy); yy+=17;}
                 if(VisualFeatures.isEnabled("Target Info")){line(g,mc,"DIST  "+String.format(java.util.Locale.ROOT,"%.1f",mc.player.distanceTo(target))+"m",x,yy); yy+=17;}
             }
