@@ -34,7 +34,8 @@ public final class ClickGuiScreen extends Screen {
         {"Outline nearby players","Enlarge player hitboxes"},
         {"Choose player skins","Preview before applying","Cape collection","Saved appearance presets"}
     };
-    private int category=0, rightTab=-1, scroll=0, language=0;
+    private int category=0, rightTab=-1, scroll=0;
+    private static int language=0;
 
     public ClickGuiScreen(){super(Component.literal("PROJECT VISUAL"));}
     private String tr(String en,String ru,String kk){return language==1?ru:language==2?kk:en;}
@@ -149,10 +150,10 @@ public final class ClickGuiScreen extends Screen {
             int cardY=y+74;
             if(mx>=mainX&&mx<=mainX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setPlayerEsp(!VisualFeatures.isPlayerEsp());return true;}
             int hitX=mainX+cardW+12;
-            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setHitboxEnabled(!VisualFeatures.isHitboxEnabled());return true;}
             if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY+28&&my<=cardY+48){
                 VisualFeatures.changeHitboxExpansion(mx<hitX+cardW/2?-0.05:0.05);return true;
             }
+            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY&&my<=cardY+27){VisualFeatures.setHitboxEnabled(!VisualFeatures.isHitboxEnabled());return true;}
         }
         return super.mouseClicked(e,dbl);
     }
