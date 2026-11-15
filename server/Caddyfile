@@ -1,0 +1,4 @@
+{$PV_DOMAIN} {
+    encode zstd gzip
+    reverse_proxy project-visual-global:8787
+}

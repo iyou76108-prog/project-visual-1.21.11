@@ -19,7 +19,22 @@ npm start
 
 Health check: `GET http://localhost:8787/health`.
 
-## Deployment requirements
+## Deployment with Docker Compose + automatic HTTPS
+
+1. Point a DNS A/AAAA record for a domain at the host running Docker.
+2. Copy `.env.example` to `.env` and set `PV_DOMAIN` to that domain and
+   `PV_TOKEN_SECRET` to a random secret from `openssl rand -hex 32`.
+3. Open inbound TCP ports 80 and 443 (and optionally UDP 443) on the host/firewall.
+4. Run:
+
+```sh
+docker compose up -d --build
+```
+
+Caddy obtains and renews the HTTPS certificate automatically. In the Friends screen,
+players use `https://<PV_DOMAIN>`; the mod switches to WSS for realtime updates.
+
+## Manual deployment requirements
 
 - Put the service behind HTTPS/WSS (for example, a managed Node host or reverse proxy).
 - Set `PV_TOKEN_SECRET` to a stable secret of at least 32 bytes. Do not commit it.
