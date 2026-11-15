@@ -1,6 +1,7 @@
 package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
+import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -118,9 +119,9 @@ public final class ClickGuiScreen extends Screen {
             g.fill(x,by,x+w,by+76,CARD);
             g.fill(x,by,x+3,by+76,VisualFeatures.accentColor());
             g.drawString(font,"Chess",x+12,by+10,TEXT,false);
-            g.drawString(font,tr("Play against a medium AI","Играть против ИИ среднего уровня","Орташа деңгейдегі ЖИ-мен ойнау"),x+12,by+28,MUTED,false);
+            g.drawString(font,tr("3D board in the world  /  Medium AI","3D-доска в мире  /  Средний ИИ","3D тақта  /  Орташа ЖИ"),x+12,by+28,MUTED,false);
             g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+51,VisualFeatures.accentColor(),false);
-            g.drawString(font,tr("Online friends matchmaking is being prepared.","Глобальные приглашения друзей готовятся.","Достармен онлайн ойнау дайындалуда."),x,y+143,MUTED,false);
+            g.drawString(font,tr("Summon portal  •  Right-click pieces and squares","Портал призывает доску  •  ПКМ: фигура и клетка","Портал шақырады  •  Оң жақ батырма: фигура мен ұяшық"),x,y+143,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
             g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
@@ -142,7 +143,8 @@ public final class ClickGuiScreen extends Screen {
         }else if(rightTab==1){
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
-                Minecraft.getInstance().setScreen(new ChessScreen());
+                ChessWorldGame.start();
+                Minecraft.getInstance().setScreen(null);
                 return true;
             }
         }else if(rightTab<0){
