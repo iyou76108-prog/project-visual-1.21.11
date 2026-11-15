@@ -4,7 +4,7 @@ import dev.projectvisual.client.ProjectVisualClient;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.resources.Identifier;
 
 public final class VisualHud {
@@ -22,17 +22,17 @@ public final class VisualHud {
                 VisualHud::render);
     }
 
-    private static void render(GuiGraphics graphics, net.minecraft.client.DeltaTracker tickCounter) {
+    private static void render(GuiGraphicsExtractor graphics, net.minecraft.client.DeltaTracker tickCounter) {
         Minecraft client = Minecraft.getInstance();
         if (client.options.hideGui || client.player == null || client.level == null) return;
 
-        int x = 10, y = 10, width = 112, height = 38;
+        int x = 10, y = 10, width = 118, height = 40;
         graphics.fill(x, y, x + width, y + height, PANEL);
         graphics.fill(x, y, x + 2, y + height, ACCENT);
         graphics.fill(x + 10, y + 9, x + 15, y + 14, ACCENT);
-        graphics.drawString(client.font, "PROJECT VISUAL", x + 21, y + 7, TEXT, false);
-        graphics.drawString(client.font, "FPS", x + 10, y + 23, MUTED, false);
-        graphics.drawString(client.font, Integer.toString(client.getFps()), x + 36, y + 23, TEXT, false);
-        graphics.drawString(client.font, "1.21.11", x + 76, y + 23, ACCENT, false);
+        graphics.text(client.font, "PROJECT VISUAL", x + 21, y + 7, TEXT, false);
+        graphics.text(client.font, "FPS", x + 10, y + 24, MUTED, false);
+        graphics.text(client.font, Integer.toString(client.getFps()), x + 36, y + 24, TEXT, false);
+        graphics.text(client.font, "1.21.11", x + 80, y + 24, ACCENT, false);
     }
 }
