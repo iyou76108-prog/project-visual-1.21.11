@@ -1,6 +1,6 @@
 package dev.projectvisual.mixin;
 
-import dev.projectvisual.client.VisualFeatures;
+import dev.projectvisual.client.VisualFeatures;\nimport dev.projectvisual.client.chess.ChessWorldGame;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.SubmitNodeCollector;
 import net.minecraft.client.renderer.entity.LivingEntityRenderer;
@@ -32,7 +32,7 @@ public abstract class QueenSkinRenderMixin {
             CallbackInfo ci
     ) {
         Minecraft client = Minecraft.getInstance();
-        if ((VisualFeatures.isEnabled("Queen Skin") || VisualFeatures.isEnabled("Invoker Skin"))
+        if ((VisualFeatures.isEnabled("Queen Skin") || VisualFeatures.isEnabled("Invoker Skin")\n                || ChessWorldGame.isWatcherSucking())
                 && client.player != null
                 && !client.options.getCameraType().isFirstPerson()
                 && state instanceof AvatarRenderState avatar
