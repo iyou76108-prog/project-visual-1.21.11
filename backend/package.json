@@ -1,0 +1,17 @@
+{
+  "name": "project-visual-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Global friends, presence and server-authoritative chess service for PROJECT VISUAL",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "start": "node server.mjs",
+    "check": "node --check server.mjs"
+  },
+  "dependencies": {
+    "better-sqlite3": "13.2.0",
+    "chess.js": "1.4.0",
+    "ws": "8.23.0"
+  }
+}

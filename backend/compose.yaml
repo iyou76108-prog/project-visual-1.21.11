@@ -1,0 +1,13 @@
+services:
+  project-visual-service:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      PV_DB_PATH: /app/data/project-visual.sqlite
+    volumes:
+      - project-visual-data:/app/data
+volumes:
+  project-visual-data:
