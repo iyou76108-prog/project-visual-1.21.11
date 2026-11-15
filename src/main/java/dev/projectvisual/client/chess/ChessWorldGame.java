@@ -943,10 +943,6 @@ public final class ChessWorldGame {
             sphere(out, t, 0.0D, y, 0.19D, 0.035D, 0xFFD9D8E2, 8, 5);
         }
 
-        // A cold purple aura pulses as the Watcher closes the distance.
-        double pulse = 0.5D + 0.5D * Math.sin(age * 0.12D);
-        int aura = 0x604B27FF | ((int) (pulse * 70.0D) << 24);
-        sphere(out, t, 0.0D, 1.68D, 0.30D, 0.34D, aura, 14, 8);
     }
 
     private static void renderAxe(VertexConsumer out, BoardTransform t, int age) {
