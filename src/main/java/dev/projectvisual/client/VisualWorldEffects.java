@@ -238,9 +238,10 @@ public final class VisualWorldEffects {
             int color = VisualFeatures.accentColor();
             if (drawEntityHitboxes) {
                 for (Entity entity : client.level.entitiesForRendering()) {
-                    if (!(entity instanceof LivingEntity living) || living == client.player
-                            || !living.isAlive() || client.player.distanceToSqr(living) > 64.0D * 64.0D) continue;
-                    drawBox(context, espLines, living.getBoundingBox(), camera, color, 2.0F);
+                    if (!(entity instanceof Player target) || target == client.player
+                            || !target.isAlive() || client.player.distanceToSqr(target) > 64.0D * 64.0D) continue;
+                    drawBox(context, espLines, target.getBoundingBox().inflate(VisualFeatures.hitboxExpansion()),
+                            camera, color, 2.0F);
                 }
             }
             if (drawChestEsp) {
