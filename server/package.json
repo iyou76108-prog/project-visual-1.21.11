@@ -1,0 +1,18 @@
+{
+  "name": "project-visual-global-service",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Global accounts, friend presence, invitations and authoritative online chess for PROJECT VISUAL.",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "check": "node --check src/server.js"
+  },
+  "dependencies": {
+    "chess.js": "1.4.0",
+    "ws": "8.18.3"
+  }
+}
