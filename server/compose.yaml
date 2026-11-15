@@ -1,0 +1,34 @@
+services:
+  project-visual-global:
+    build: .
+    restart: unless-stopped
+    environment:
+      HOST: "0.0.0.0"
+      PORT: "8787"
+      PV_TOKEN_SECRET: \${PV_TOKEN_SECRET:?Set PV_TOKEN_SECRET in server/.env}
+      PV_DATA_FILE: /data/project-visual.json
+    volumes:
+      - project_visual_data:/data
+    expose:
+      - "8787"
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    environment:
+      PV_DOMAIN: \${PV_DOMAIN:?Set PV_DOMAIN in server/.env}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - project-visual-global
+
+volumes:
+  project_visual_data:
+  caddy_data:
+  caddy_config:
