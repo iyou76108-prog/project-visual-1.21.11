@@ -15,6 +15,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
 /** Global PROJECT VISUAL account, friends, requests and chess invite screen. */
