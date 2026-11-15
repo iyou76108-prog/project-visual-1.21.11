@@ -25,7 +25,7 @@ public final class ClickGuiScreen extends Screen {
     };
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
-        {"Particles on hit","Damage flash","Custom hit feedback","Crosshair styles","Target details","Totem pop tracking"},
+        {"Particles on confirmed hurt event","Screen-edge flash on damage","Green feedback on entity target","Replaces vanilla crosshair","Target name, health, armor and distance","Inventory count and pop counter"},
         {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","Hand appearance","Cape visuals"},
         {"Brighter world","Weather visuals","Local world time","World color mood","Highlight selected blocks","Movement path markers"},
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
