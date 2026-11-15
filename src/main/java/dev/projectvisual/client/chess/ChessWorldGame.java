@@ -6,6 +6,7 @@ import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.projectvisual.client.ProjectVisualClient;
+import dev.projectvisual.client.VisualFeatures;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -89,6 +90,21 @@ public final class ChessWorldGame {
     private static KeyMapping restartKey;
     private static MoveAnimation moveAnimation;
 
+    private static final int AFK_IDLE_TICKS = 20 * 30;
+    private static final int AFK_THROW_TICK = 38;
+    private static final int AFK_THROW_DURATION = 24;
+    private static final int AFK_SCENE_DURATION = 92;
+    private static int afkIdleTicks;
+    private static int afkSceneTick = -1;
+    private static boolean afkEventPlayed;
+    private static boolean afkTracking;
+    private static Vec3 afkLastPosition = Vec3.ZERO;
+    private static float afkLastYaw;
+    private static float afkLastPitch;
+    private static Vec3 magnusPosition = Vec3.ZERO;
+    private static Vec3 magnusRight = new Vec3(1, 0, 0);
+    private static Vec3 magnusForward = new Vec3(0, 0, 1);
+
     private ChessWorldGame() {}
 
     public static void register() {
@@ -103,6 +119,7 @@ public final class ChessWorldGame {
                 "key.project_visual.chess_restart", GLFW.GLFW_KEY_R, category));
 
         ClientTickEvents.END_CLIENT_TICK.register(ChessWorldGame::tick);
+        ClientTickEvents.END_CLIENT_TICK.register(ChessWorldGame::tickCosmetics);
         WorldRenderEvents.AFTER_ENTITIES.register(ChessWorldGame::render);
     }
 
@@ -388,11 +405,12 @@ public final class ChessWorldGame {
     }
 
     private static void render(WorldRenderContext context) {
-        if (!active) return;
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null) return;
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
+        renderChessCosmetics(context, client, camera);
+        if (!active) return;
         float progress = easeOut(introProgress());
         float scale = 0.12F + 0.88F * progress;
         double lift = introLift() + Math.sin((client.level.getGameTime() % 100000L) * 0.055D) * 0.018D * progress;
@@ -408,6 +426,229 @@ public final class ChessWorldGame {
         VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
         renderPortal(lines, transform, camera, progress);
         renderHighlights(lines, transform, camera);
+    }
+
+    private static void tickCosmetics(Minecraft client) {
+        if (client.player == null || client.level == null) {
+            resetAfkTracking();
+            return;
+        }
+        if (!VisualFeatures.isEnabled("Magnus AFK")) {
+            resetAfkTracking();
+            return;
+        }
+
+        Vec3 position = client.player.position();
+        float yaw = client.player.getYRot();
+        float pitch = client.player.getXRot();
+        if (!afkTracking) {
+            afkTracking = true;
+            afkLastPosition = position;
+            afkLastYaw = yaw;
+            afkLastPitch = pitch;
+            afkIdleTicks = 0;
+            return;
+        }
+
+        boolean moved = position.distanceToSqr(afkLastPosition) > 0.0025D;
+        boolean looked = angleDifference(yaw, afkLastYaw) > 0.8F
+                || Math.abs(pitch - afkLastPitch) > 0.8F;
+        afkLastPosition = position;
+        afkLastYaw = yaw;
+        afkLastPitch = pitch;
+
+        if (moved || looked || client.player.isUsingItem() || client.player.swinging) {
+            afkIdleTicks = 0;
+            afkSceneTick = -1;
+            afkEventPlayed = false;
+            return;
+        }
+
+        if (afkSceneTick >= 0) {
+            afkSceneTick++;
+            if (afkSceneTick == AFK_THROW_TICK + AFK_THROW_DURATION && client.level != null) {
+                Vec3 impact = client.player.position().add(0.0D, 0.95D, 0.0D);
+                for (int i = 0; i < 14; i++) {
+                    double angle = Math.PI * 2.0D * i / 14.0D;
+                    client.level.addParticle(ParticleTypes.CRIT, impact.x, impact.y, impact.z,
+                            Math.cos(angle) * 0.12D, 0.08D, Math.sin(angle) * 0.12D);
+                }
+                client.level.addParticle(ParticleTypes.POOF, impact.x, impact.y, impact.z, 0.0D, 0.04D, 0.0D);
+            }
+            if (afkSceneTick > AFK_SCENE_DURATION) {
+                afkSceneTick = -1;
+            }
+            return;
+        }
+
+        if (!afkEventPlayed) afkIdleTicks++;
+        if (afkIdleTicks >= AFK_IDLE_TICKS && !afkEventPlayed) {
+            beginMagnusAfkScene(client);
+        }
+    }
+
+    private static void resetAfkTracking() {
+        afkTracking = false;
+        afkIdleTicks = 0;
+        afkSceneTick = -1;
+        afkEventPlayed = false;
+    }
+
+    private static float angleDifference(float a, float b) {
+        float difference = (a - b) % 360.0F;
+        if (difference > 180.0F) difference -= 360.0F;
+        if (difference < -180.0F) difference += 360.0F;
+        return Math.abs(difference);
+    }
+
+    private static void beginMagnusAfkScene(Minecraft client) {
+        Vec3 playerPosition = client.player.position();
+        double playerYaw = Math.toRadians(client.player.getYRot());
+        Vec3 playerForward = new Vec3(-Math.sin(playerYaw), 0.0D, Math.cos(playerYaw)).normalize();
+        Vec3 playerRight = new Vec3(Math.cos(playerYaw), 0.0D, Math.sin(playerYaw)).normalize();
+
+        magnusPosition = playerPosition.add(playerForward.scale(2.65D)).add(playerRight.scale(-0.75D));
+        Vec3 towardPlayer = playerPosition.subtract(magnusPosition).normalize();
+        double facingYaw = Math.atan2(-towardPlayer.x, towardPlayer.z);
+        magnusForward = new Vec3(-Math.sin(facingYaw), 0.0D, Math.cos(facingYaw)).normalize();
+        magnusRight = new Vec3(Math.cos(facingYaw), 0.0D, Math.sin(facingYaw)).normalize();
+
+        afkIdleTicks = AFK_IDLE_TICKS;
+        afkEventPlayed = true;
+        afkSceneTick = 0;
+        client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§6MAGNUS CARLSEN §7— Эй, хватит AFK! ♟"),
+                false);
+    }
+
+    private static void renderChessCosmetics(WorldRenderContext context, Minecraft client, Vec3 camera) {
+        boolean queenSkin = VisualFeatures.isEnabled("Queen Skin")
+                && !client.options.getCameraType().isFirstPerson()
+                && client.player.isAlive();
+        boolean magnusScene = VisualFeatures.isEnabled("Magnus AFK") && afkSceneTick >= 0;
+        if (!queenSkin && !magnusScene) return;
+
+        VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
+
+        if (queenSkin) {
+            double yaw = Math.toRadians(client.player.getYRot());
+            Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+            Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+            Vec3 relative = client.player.position().subtract(camera);
+            BoardTransform queenTransform = new BoardTransform(relative, playerRight, playerForward, 2.85F, 0.0D);
+            renderPiece(out, queenTransform, 0.0F, 0.0F, 'Q', 0.0F);
+        }
+
+        if (magnusScene) {
+            float approach = Math.min(1.0F, afkSceneTick / 14.0F);
+            Vec3 animatedPosition = magnusPosition.add(magnusForward.scale(0.42D * (1.0D - approach)));
+            animatedPosition = animatedPosition.subtract(camera);
+            BoardTransform magnusTransform = new BoardTransform(animatedPosition, magnusRight, magnusForward, 1.0F,
+                    Math.sin(afkSceneTick * 0.12D) * 0.012D);
+            renderMagnus(out, magnusTransform, afkSceneTick);
+
+            if (afkSceneTick < AFK_THROW_TICK) {
+                Vec3 heldKing = magnusPosition.add(magnusRight.scale(0.38D))
+                        .add(magnusForward.scale(0.20D)).add(0.0D, 1.32D, 0.0D);
+                BoardTransform heldTransform = new BoardTransform(heldKing.subtract(camera),
+                        magnusRight, magnusForward, 0.62F, 0.0D);
+                renderPiece(out, heldTransform, 0.0F, 0.0F, 'k', 0.0F);
+            } else {
+                float flight = Math.min(1.0F,
+                        (afkSceneTick - AFK_THROW_TICK) / (float) AFK_THROW_DURATION);
+                Vec3 throwStart = magnusPosition.add(magnusRight.scale(0.38D))
+                        .add(magnusForward.scale(0.36D)).add(0.0D, 1.34D, 0.0D);
+                Vec3 throwEnd = client.player.position().add(0.0D, 0.95D, 0.0D);
+                Vec3 kingPosition = throwStart.lerp(throwEnd, flight)
+                        .add(0.0D, Math.sin(flight * Math.PI) * 0.72D, 0.0D);
+                BoardTransform kingTransform = new BoardTransform(kingPosition.subtract(camera),
+                        magnusRight, magnusForward, 0.62F, 0.0D);
+                renderPiece(out, kingTransform, 0.0F, 0.0F, 'k', 0.0F);
+            }
+        }
+    }
+
+    private static void renderMagnus(VertexConsumer out, BoardTransform t, int age) {
+        // Low-poly chess grandmaster caricature: dark blazer, white shirt, brown hair.
+        box(out, t, -0.19D, 0.05D, -0.105D, -0.025D, 0.62D, 0.105D, 0xFF202A38);
+        box(out, t, 0.025D, 0.05D, -0.105D, 0.19D, 0.62D, 0.105D, 0xFF202A38);
+        box(out, t, -0.235D, 0.04D, -0.15D, -0.015D, 0.16D, 0.15D, 0xFF11151E);
+        box(out, t, 0.015D, 0.04D, -0.15D, 0.235D, 0.16D, 0.15D, 0xFF11151E);
+
+        box(out, t, -0.255D, 0.62D, -0.12D, 0.255D, 1.34D, 0.12D, 0xFF273244);
+        box(out, t, -0.085D, 0.72D, 0.121D, 0.085D, 1.27D, 0.145D, 0xFFF1EEE8);
+        box(out, t, -0.026D, 0.86D, 0.147D, 0.026D, 1.22D, 0.16D, 0xFF60718B);
+        box(out, t, -0.075D, 1.30D, -0.09D, 0.075D, 1.40D, 0.10D, 0xFFF1EEE8);
+
+        // Neck and face.
+        box(out, t, -0.075D, 1.30D, -0.075D, 0.075D, 1.48D, 0.075D, 0xFFD9B18F);
+        sphere(out, t, 0.0D, 1.56D, 0.0D, 0.175D, 0xFFD9B18F, 12, 8);
+        // Hairline, crown and side locks.
+        sphere(out, t, 0.0D, 1.675D, -0.012D, 0.174D, 0xFF765B45, 12, 6);
+        box(out, t, -0.17D, 1.55D, -0.06D, -0.105D, 1.68D, 0.075D, 0xFF765B45);
+        box(out, t, 0.105D, 1.55D, -0.06D, 0.17D, 1.68D, 0.075D, 0xFF765B45);
+        // Eyes and nose face the local +Z direction.
+        box(out, t, -0.075D, 1.575D, 0.155D, -0.032D, 1.600D, 0.169D, 0xFF27211F);
+        box(out, t, 0.032D, 1.575D, 0.155D, 0.075D, 1.600D, 0.169D, 0xFF27211F);
+        sphere(out, t, 0.0D, 1.535D, 0.169D, 0.025D, 0xFFBE9071, 8, 5);
+
+        // Left arm remains relaxed. The right arm winds up, throws, then follows through.
+        Vec3 leftShoulder = new Vec3(-0.22D, 1.24D, 0.02D);
+        Vec3 leftElbow = new Vec3(-0.34D, 1.02D, 0.13D);
+        Vec3 leftHand = new Vec3(-0.32D, 0.88D, 0.20D);
+        renderLimb(out, t, leftShoulder, leftElbow, 0.095D, 0xFF273244);
+        renderLimb(out, t, leftElbow, leftHand, 0.065D, 0xFFD9B18F);
+        sphere(out, t, leftHand.x, leftHand.y, leftHand.z, 0.075D, 0xFFD9B18F, 8, 5);
+
+        float wind = smooth01((age - 7.0F) / 25.0F);
+        float follow = smooth01((age - (AFK_THROW_TICK - 1.0F)) / 9.0F);
+        Vec3 shoulder = new Vec3(0.22D, 1.24D, 0.02D);
+        Vec3 elbowWind = new Vec3(0.36D, 1.34D, -0.12D);
+        Vec3 handWind = new Vec3(0.39D, 1.60D, -0.22D);
+        Vec3 elbowThrow = new Vec3(0.34D, 1.14D, 0.28D);
+        Vec3 handThrow = new Vec3(0.31D, 1.02D, 0.56D);
+        Vec3 elbow = mix(elbowWind, elbowThrow, follow);
+        Vec3 hand = mix(handWind, handThrow, follow);
+        elbow = mix(new Vec3(0.34D, 1.06D, 0.12D), elbow, wind);
+        hand = mix(new Vec3(0.36D, 0.92D, 0.22D), hand, wind);
+        renderLimb(out, t, shoulder, elbow, 0.105D, 0xFF273244);
+        renderLimb(out, t, elbow, hand, 0.072D, 0xFFD9B18F);
+        sphere(out, t, elbow.x, elbow.y, elbow.z, 0.078D, 0xFFD9B18F, 8, 5);
+        sphere(out, t, hand.x, hand.y, hand.z, 0.075D, 0xFFD9B18F, 8, 5);
+    }
+
+    private static void renderLimb(VertexConsumer out, BoardTransform t, Vec3 start, Vec3 end,
+                                   double radius, int color) {
+        Vec3 direction = end.subtract(start);
+        if (direction.lengthSqr() < 1.0E-8D) return;
+        direction = direction.normalize();
+        Vec3 reference = Math.abs(direction.y) > 0.92D
+                ? new Vec3(1.0D, 0.0D, 0.0D) : new Vec3(0.0D, 1.0D, 0.0D);
+        Vec3 u = direction.cross(reference).normalize();
+        Vec3 v = direction.cross(u).normalize();
+        int segments = 8;
+        for (int i = 0; i < segments; i++) {
+            double a0 = Math.PI * 2.0D * i / segments;
+            double a1 = Math.PI * 2.0D * (i + 1) / segments;
+            Vec3 p0 = start.add(u.scale(Math.cos(a0) * radius)).add(v.scale(Math.sin(a0) * radius));
+            Vec3 p1 = start.add(u.scale(Math.cos(a1) * radius)).add(v.scale(Math.sin(a1) * radius));
+            Vec3 p2 = end.add(u.scale(Math.cos(a1) * radius)).add(v.scale(Math.sin(a1) * radius));
+            Vec3 p3 = end.add(u.scale(Math.cos(a0) * radius)).add(v.scale(Math.sin(a0) * radius));
+            quad(out, t, color, 0.0D, 1.0D, 0.0D,
+                    p0.x, p0.y, p0.z, p1.x, p1.y, p1.z,
+                    p2.x, p2.y, p2.z, p3.x, p3.y, p3.z);
+        }
+        sphere(out, t, start.x, start.y, start.z, radius, color, 8, 5);
+        sphere(out, t, end.x, end.y, end.z, radius, color, 8, 5);
+    }
+
+    private static float smooth01(float value) {
+        float t = Math.max(0.0F, Math.min(1.0F, value));
+        return t * t * (3.0F - 2.0F * t);
+    }
+
+    private static Vec3 mix(Vec3 from, Vec3 to, float amount) {
+        return from.lerp(to, Math.max(0.0F, Math.min(1.0F, amount)));
     }
 
     private static void renderPortal(VertexConsumer lines, BoardTransform transform,
