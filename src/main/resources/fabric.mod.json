@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "id": "project_visual",
+  "version": "${version}",
+  "name": "PROJECT VISUAL",
+  "description": "A clean, performance-first visual client for Minecraft 1.21.11.",
+  "authors": ["PROJECT VISUAL Team"],
+  "contact": { "sources": "https://github.com/iyou76108-prog/project-visual-1.21.11" },
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": { "client": ["dev.projectvisual.client.ProjectVisualClient"] },
+  "depends": {
+    "fabricloader": ">=0.18.1",
+    "minecraft": "1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
