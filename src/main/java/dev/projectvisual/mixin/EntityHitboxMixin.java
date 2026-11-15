@@ -4,7 +4,6 @@ import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.AABB;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -23,18 +22,17 @@ public abstract class EntityHitboxMixin {
     }
 
     /**
-     * Enlarges client-side living-entity pick boxes while the Hitboxes module is enabled.
-     * This affects local targeting/raycasting only; it does not change server hitboxes or reach.
+     * Meteor-style target expansion: Entity#getPickRadius is consulted by the
+     * client's entity ray-picking code. Only other live players are affected.
+     * This is client-side target selection, not a server-side reach change.
      */
-    @Inject(method = "getBoundingBox()Lnet/minecraft/world/phys/AABB;",
-            at = @At("RETURN"), cancellable = true)
-    private void projectvisual$expandTargetBox(CallbackInfoReturnable<AABB> cir) {
+    @Inject(method = "getPickRadius()F", at = @At("HEAD"), cancellable = true)
+    private void projectvisual$expandPlayerPickRadius(CallbackInfoReturnable<Float> cir) {
         if (!VisualFeatures.isEnabled("Hitboxes")) return;
-        if (!((Object) this instanceof LivingEntity living)
-                || living == Minecraft.getInstance().player
-                || !living.isAlive()) return;
-
-        cir.setReturnValue(cir.getReturnValue().inflate(VisualFeatures.hitboxExpansion()));
+        if (!((Object) this instanceof Player target)
+                || target == Minecraft.getInstance().player
+                || !target.isAlive()) return;
+        cir.setReturnValue((float) VisualFeatures.hitboxExpansion());
     }
 
 }
