@@ -3,6 +3,7 @@ on:
   push:
     branches: [ "**" ]
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
@@ -19,3 +20,10 @@ jobs:
           gradle-version: "9.2"
       - name: Build mod
         run: gradle build --no-daemon
+      - name: Upload testable mod JAR
+        uses: actions/upload-artifact@v4
+        with:
+          name: project-visual-0.1.0
+          path: build/libs/*.jar
+          if-no-files-found: error
+          retention-days: 14
