@@ -188,18 +188,8 @@ public final class FriendsScreen extends Screen {
                 if (event.x() >= right + colWidth - 50 && event.x() <= right + colWidth - 6
                         && event.y() >= y - 3 && event.y() <= y + 15) {
                     String id = incomingInvites.get(i).get("id").getAsString();
-                    GlobalServiceClient.get().acceptInvite(id).whenComplete((response, error) ->
-                            Minecraft.getInstance().execute(() -> {
-                                if (error != null) {
-                                    status = message(error);
-                                } else {
-                                    String matchId = response.get("matchId").getAsString();
-                                    String color = "white";
-                                    String fen = response.get("fen").getAsString();
-                                    Minecraft.getInstance().setScreen(
-                                            new OnlineChessScreen(matchId, color, fen, "Friend"));
-                                }
-                            }));
+                    runAction(GlobalServiceClient.get().acceptInvite(id),
+                            "Invitation accepted. Opening the online board...");
                     return true;
                 }
             }
@@ -271,10 +261,21 @@ public final class FriendsScreen extends Screen {
 
     private void handleEvent(JsonObject event) {
         String type = event.has("type") ? event.get("type").getAsString() : "update";
+        if ("match_started".equals(type)) {
+            String matchId = event.get("matchId").getAsString();
+            String color = event.get("color").getAsString();
+            String fen = event.get("fen").getAsString();
+            JsonObject opponent = event.has("opponent")
+                    ? event.getAsJsonObject("opponent") : null;
+            String opponentName = opponent != null && opponent.has("username")
+                    ? opponent.get("username").getAsString() : "Friend";
+            Minecraft.getInstance().setScreen(
+                    new OnlineChessScreen(matchId, color, fen, opponentName));
+            return;
+        }
         status = switch (type) {
             case "friend_request" -> "New friend request received.";
             case "chess_invite" -> "You received a chess invitation.";
-            case "match_started" -> "Online chess match started.";
             case "match_state" -> "Online chess board updated.";
             case "presence" -> event.has("online") && event.get("online").getAsBoolean()
                     ? "A friend came online." : "A friend went offline.";
