@@ -54,6 +54,13 @@ async function api(base, route, token, body) {
 
 function connectSocket(url) {
   const socket = new WebSocket(url);
+  socket.__eventBuffer = [];
+  socket.on("message", raw => {
+    try {
+      socket.__eventBuffer.push(JSON.parse(raw.toString()));
+      if (socket.__eventBuffer.length > 64) socket.__eventBuffer.shift();
+    } catch { }
+  });
   return new Promise((resolve, reject) => {
     socket.once("open", () => resolve(socket));
     socket.once("error", reject);
@@ -61,6 +68,9 @@ function connectSocket(url) {
 }
 
 function waitForEvent(socket, predicate, timeoutMs = 5_000) {
+  const buffered = socket.__eventBuffer || [];
+  const index = buffered.findIndex(predicate);
+  if (index >= 0) return Promise.resolve(buffered.splice(index, 1)[0]);
   return new Promise((resolve, reject) => {
     const timer = setTimeout(() => {
       socket.off("message", onMessage);
