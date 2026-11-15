@@ -2,6 +2,7 @@ package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
 import net.minecraft.client.gui.GuiGraphics;
+import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
 
@@ -83,8 +84,9 @@ public final class ClickGuiScreen extends Screen {
     }
 
     @Override
-    public boolean mouseClicked(double mx, double my, int button) {
-        if (button != 0) return super.mouseClicked(mx, my, button);
+    public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
+        double mx = event.x(), my = event.y();
+        if (event.button() != 0) return super.mouseClicked(event, doubleClick);
         int pw = Math.min(760, width - 32), ph = Math.min(440, height - 32);
         int x = (width - pw) / 2, y = (height - ph) / 2, sw = 158;
         for (int i = 0; i < CATS.length; i++) {
@@ -100,7 +102,7 @@ public final class ClickGuiScreen extends Screen {
                 VisualHud.setEnabled(!VisualHud.isEnabled()); return true;
             }
         }
-        return super.mouseClicked(mx, my, button);
+        return super.mouseClicked(event, doubleClick);
     }
 
     @Override
