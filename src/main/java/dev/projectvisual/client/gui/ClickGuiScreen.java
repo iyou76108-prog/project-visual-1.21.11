@@ -84,14 +84,13 @@ public final class ClickGuiScreen extends Screen {
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
-                                boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
+                boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
                 boolean active = VisualFeatures.isEnabled(names[n]);
                 g.fill(cx,cy,cx+2,cy+48,active?VisualFeatures.accentColor():0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
-                String state = VisualFeatures.isEnabled(names[n]) ? "ON" : "OFF";
-                boolean active = VisualFeatures.isEnabled(names[n]);
+                String state = active ? "ON" : "OFF";
                 g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:MUTED,false);
             }
         }
