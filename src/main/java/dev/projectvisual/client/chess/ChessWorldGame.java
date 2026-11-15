@@ -94,8 +94,13 @@ public final class ChessWorldGame {
     private static final int AFK_THROW_TICK = 38;
     private static final int AFK_THROW_DURATION = 24;
     private static final int AFK_SCENE_DURATION = 92;
+    private static final int AXE_APPROACH_TICK = 42;
+    private static final int AXE_WINDUP_TICK = 52;
+    private static final int AXE_IMPACT_TICK = 72;
+    private static final int AXE_SCENE_DURATION = 116;
     private static int afkIdleTicks;
     private static int afkSceneTick = -1;
+    private static int afkSceneType; // 1 = Magnus throws a king, 2 = Axe rushes and swings
     private static boolean afkEventPlayed;
     private static boolean afkTracking;
     private static Vec3 afkLastPosition = Vec3.ZERO;
@@ -104,6 +109,11 @@ public final class ChessWorldGame {
     private static Vec3 magnusPosition = Vec3.ZERO;
     private static Vec3 magnusRight = new Vec3(1, 0, 0);
     private static Vec3 magnusForward = new Vec3(0, 0, 1);
+    private static Vec3 axeStartPosition = Vec3.ZERO;
+    private static Vec3 axeEndPosition = Vec3.ZERO;
+    private static Vec3 axeRight = new Vec3(1, 0, 0);
+    private static Vec3 axeForward = new Vec3(0, 0, 1);
+    private static int invokerPhraseIndex = -1;
 
     private ChessWorldGame() {}
 
@@ -433,7 +443,28 @@ public final class ChessWorldGame {
             resetAfkTracking();
             return;
         }
-        if (!VisualFeatures.isEnabled("Magnus AFK")) {
+
+        long gameTime = client.level.getGameTime();
+        boolean invokerEnabled = VisualFeatures.isEnabled("Invoker Skin");
+        if (invokerEnabled && gameTime % 120L == 0L) {
+            String[] phrases = {
+                    "The elements answer.",
+                    "Quas. Wex. Exort!",
+                    "Your fate is already written.",
+                    "Invoke!",
+                    "The arcane is mine.",
+                    "I have foreseen this."
+            };
+            invokerPhraseIndex = (invokerPhraseIndex + 1) % phrases.length;
+            client.player.displayClientMessage(
+                    net.minecraft.network.chat.Component.literal(
+                            "§5INVOKER §8» §f" + phrases[invokerPhraseIndex]),
+                    true);
+        }
+
+        boolean magnusEnabled = VisualFeatures.isEnabled("Magnus AFK");
+        boolean axeEnabled = VisualFeatures.isEnabled("Axe AFK");
+        if (!magnusEnabled && !axeEnabled) {
             resetAfkTracking();
             return;
         }
@@ -460,37 +491,60 @@ public final class ChessWorldGame {
         if (moved || looked || client.player.isUsingItem() || client.player.swinging) {
             afkIdleTicks = 0;
             afkSceneTick = -1;
+            afkSceneType = 0;
             afkEventPlayed = false;
             return;
         }
 
         if (afkSceneTick >= 0) {
             afkSceneTick++;
-            if (afkSceneTick == AFK_THROW_TICK + AFK_THROW_DURATION && client.level != null) {
-                Vec3 impact = client.player.position().add(0.0D, 0.95D, 0.0D);
-                for (int i = 0; i < 14; i++) {
-                    double angle = Math.PI * 2.0D * i / 14.0D;
-                    client.level.addParticle(ParticleTypes.CRIT, impact.x, impact.y, impact.z,
-                            Math.cos(angle) * 0.12D, 0.08D, Math.sin(angle) * 0.12D);
-                }
-                client.level.addParticle(ParticleTypes.POOF, impact.x, impact.y, impact.z, 0.0D, 0.04D, 0.0D);
+            if (afkSceneType == 1
+                    && afkSceneTick == AFK_THROW_TICK + AFK_THROW_DURATION) {
+                spawnAfkImpact(client, 0.95D);
+            } else if (afkSceneType == 2 && afkSceneTick == AXE_IMPACT_TICK) {
+                spawnAfkImpact(client, 1.38D);
             }
-            if (afkSceneTick > AFK_SCENE_DURATION) {
+
+            int duration = afkSceneType == 2 ? AXE_SCENE_DURATION : AFK_SCENE_DURATION;
+            if (afkSceneTick > duration) {
                 afkSceneTick = -1;
+                afkSceneType = 0;
             }
             return;
         }
 
         if (!afkEventPlayed) afkIdleTicks++;
         if (afkIdleTicks >= AFK_IDLE_TICKS && !afkEventPlayed) {
-            beginMagnusAfkScene(client);
+            if (magnusEnabled && axeEnabled) {
+                if (ThreadLocalRandom.current().nextBoolean()) beginMagnusAfkScene(client);
+                else beginAxeAfkScene(client);
+            } else if (axeEnabled) {
+                beginAxeAfkScene(client);
+            } else {
+                beginMagnusAfkScene(client);
+            }
         }
+    }
+
+    private static void spawnAfkImpact(Minecraft client, double height) {
+        if (client.level == null || client.player == null) return;
+        Vec3 impact = client.player.position().add(0.0D, height, 0.0D);
+        for (int i = 0; i < 18; i++) {
+            double angle = Math.PI * 2.0D * i / 18.0D;
+            client.level.addParticle(ParticleTypes.CRIT, impact.x, impact.y, impact.z,
+                    Math.cos(angle) * 0.13D, 0.09D, Math.sin(angle) * 0.13D);
+        }
+        client.level.addParticle(ParticleTypes.POOF, impact.x, impact.y, impact.z,
+                0.0D, 0.045D, 0.0D);
+        client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, impact.x, impact.y, impact.z,
+                0.0D, 0.16D, 0.0D);
     }
 
     private static void resetAfkTracking() {
         afkTracking = false;
         afkIdleTicks = 0;
         afkSceneTick = -1;
+        afkSceneType = 0;
         afkEventPlayed = false;
     }
 
@@ -515,26 +569,60 @@ public final class ChessWorldGame {
 
         afkIdleTicks = AFK_IDLE_TICKS;
         afkEventPlayed = true;
+        afkSceneType = 1;
         afkSceneTick = 0;
         client.player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§6MAGNUS CARLSEN §7— Эй, хватит AFK! ♟"),
                 false);
     }
 
+    private static void beginAxeAfkScene(Minecraft client) {
+        Vec3 playerPosition = client.player.position();
+        double yaw = Math.toRadians(client.player.getYRot());
+        Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+        Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+
+        // Axe starts six blocks away and charges toward a point just in front of the player.
+        axeStartPosition = playerPosition.add(playerForward.scale(6.0D))
+                .add(playerRight.scale(0.55D));
+        axeEndPosition = playerPosition.add(playerForward.scale(1.18D))
+                .add(playerRight.scale(0.25D));
+        Vec3 towardPlayer = playerPosition.subtract(axeStartPosition).normalize();
+        double facingYaw = Math.atan2(-towardPlayer.x, towardPlayer.z);
+        axeForward = new Vec3(-Math.sin(facingYaw), 0.0D, Math.cos(facingYaw)).normalize();
+        axeRight = new Vec3(Math.cos(facingYaw), 0.0D, Math.sin(facingYaw)).normalize();
+
+        afkIdleTicks = AFK_IDLE_TICKS;
+        afkEventPlayed = true;
+        afkSceneType = 2;
+        afkSceneTick = 0;
+        client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§cAXE §7— Berserker's Call!"),
+                false);
+    }
+
     private static void renderChessCosmetics(WorldRenderContext context, Minecraft client, Vec3 camera) {
+        boolean thirdPerson = !client.options.getCameraType().isFirstPerson();
         boolean queenSkin = VisualFeatures.isEnabled("Queen Skin")
-                && !client.options.getCameraType().isFirstPerson()
-                && client.player.isAlive();
-        boolean magnusScene = VisualFeatures.isEnabled("Magnus AFK") && afkSceneTick >= 0;
-        if (!queenSkin && !magnusScene) return;
+                && thirdPerson && client.player.isAlive();
+        boolean invokerSkin = VisualFeatures.isEnabled("Invoker Skin")
+                && thirdPerson && client.player.isAlive();
+        boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
+        boolean axeScene = afkSceneType == 2 && afkSceneTick >= 0;
+        if (!queenSkin && !invokerSkin && !magnusScene && !axeScene) return;
 
         VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
 
-        if (queenSkin) {
-            double yaw = Math.toRadians(client.player.getYRot());
-            Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
-            Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
-            Vec3 relative = client.player.position().subtract(camera);
+        double yaw = Math.toRadians(client.player.getYRot());
+        Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+        Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+        Vec3 relative = client.player.position().subtract(camera);
+
+        // Invoker takes priority if both persisted toggles were enabled before this version.
+        if (invokerSkin) {
+            BoardTransform invokerTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            renderInvoker(out, invokerTransform, client.level.getGameTime());
+        } else if (queenSkin) {
             BoardTransform queenTransform = new BoardTransform(relative, playerRight, playerForward, 2.85F, 0.0D);
             renderPiece(out, queenTransform, 0.0F, 0.0F, 'Q', 0.0F);
         }
@@ -566,6 +654,101 @@ public final class ChessWorldGame {
                 renderPiece(out, kingTransform, 0.0F, 0.0F, 'k', 0.0F);
             }
         }
+
+        if (axeScene) {
+            float approach = smooth01(afkSceneTick / (float) AXE_APPROACH_TICK);
+            Vec3 actorPosition = mix(axeStartPosition, axeEndPosition, approach).subtract(camera);
+            BoardTransform axeTransform = new BoardTransform(actorPosition, axeRight, axeForward, 1.0F,
+                    Math.sin(afkSceneTick * 0.19D) * 0.012D);
+            renderAxe(out, axeTransform, afkSceneTick);
+        }
+    }
+
+    private static void renderInvoker(VertexConsumer out, BoardTransform t, long gameTime) {
+        // Original low-poly arcane mage silhouette, with three elemental spheres.
+        box(out, t, -0.29D, 0.08D, -0.12D, 0.29D, 0.88D, 0.12D, 0xFF554A70);
+        box(out, t, -0.34D, 0.12D, -0.15D, 0.34D, 0.28D, 0.15D, 0xFFB69B57);
+        box(out, t, -0.24D, 0.84D, -0.14D, 0.24D, 1.22D, 0.14D, 0xFFB69B57);
+        box(out, t, -0.11D, 0.85D, 0.145D, 0.11D, 1.20D, 0.17D, 0xFFE8D5A0);
+        box(out, t, -0.075D, 1.19D, -0.08D, 0.075D, 1.40D, 0.08D, 0xFFD9B995);
+        sphere(out, t, 0.0D, 1.48D, 0.0D, 0.17D, 0xFFD7B99A, 12, 8);
+        // Pale hair and long side locks.
+        sphere(out, t, 0.0D, 1.615D, -0.015D, 0.185D, 0xFFE8D6B7, 14, 7);
+        box(out, t, -0.19D, 1.30D, -0.04D, -0.125D, 1.60D, 0.075D, 0xFFE8D6B7);
+        box(out, t, 0.125D, 1.30D, -0.04D, 0.19D, 1.60D, 0.075D, 0xFFE8D6B7);
+        box(out, t, -0.075D, 1.48D, 0.151D, -0.035D, 1.505D, 0.166D, 0xFF382D3D);
+        box(out, t, 0.035D, 1.48D, 0.151D, 0.075D, 1.505D, 0.166D, 0xFF382D3D);
+
+        // Floating Quas, Wex and Exort spheres; their left-to-right order shuffles every six seconds.
+        int[][] orders = {
+                {0, 1, 2}, {1, 0, 2}, {2, 1, 0},
+                {0, 2, 1}, {1, 2, 0}, {2, 0, 1}
+        };
+        int[] order = orders[(int) ((gameTime / 120L) % orders.length)];
+        int[] orbColors = {0xFF69D9FF, 0xFFAD78FF, 0xFFFFA34E};
+        double orbit = gameTime * 0.035D;
+        for (int i = 0; i < 3; i++) {
+            int element = order[i];
+            double angle = orbit + i * (Math.PI * 2.0D / 3.0D);
+            double x = Math.cos(angle) * 0.38D;
+            double z = 0.16D + Math.sin(angle) * 0.22D;
+            double y = 1.30D + Math.sin(angle * 1.7D) * 0.10D;
+            sphere(out, t, x, y, z, 0.105D, orbColors[element], 12, 7);
+            sphere(out, t, x - 0.025D, y + 0.035D, z + 0.055D,
+                    0.035D, 0xFFFFF4DF, 8, 5);
+        }
+    }
+
+    private static void renderAxe(VertexConsumer out, BoardTransform t, int age) {
+        // Original stylized berserker: broad red armor, iron helmet and heavy battle axe.
+        box(out, t, -0.21D, 0.08D, -0.12D, -0.015D, 0.64D, 0.12D, 0xFF7B332B);
+        box(out, t, 0.015D, 0.08D, -0.12D, 0.21D, 0.64D, 0.12D, 0xFF7B332B);
+        box(out, t, -0.25D, 0.04D, -0.16D, -0.01D, 0.18D, 0.16D, 0xFF3D2626);
+        box(out, t, 0.01D, 0.04D, -0.16D, 0.25D, 0.18D, 0.16D, 0xFF3D2626);
+        box(out, t, -0.33D, 0.62D, -0.15D, 0.33D, 1.34D, 0.15D, 0xFF8C3029);
+        box(out, t, -0.42D, 1.15D, -0.13D, -0.20D, 1.39D, 0.16D, 0xFFB34C32);
+        box(out, t, 0.20D, 1.15D, -0.13D, 0.42D, 1.39D, 0.16D, 0xFFB34C32);
+        box(out, t, -0.11D, 0.68D, 0.152D, 0.11D, 1.30D, 0.17D, 0xFFD9B04A);
+        box(out, t, -0.075D, 1.28D, -0.08D, 0.075D, 1.44D, 0.08D, 0xFFD09C72);
+        sphere(out, t, 0.0D, 1.52D, 0.0D, 0.18D, 0xFFD09C72, 12, 8);
+        // Helmet, crest, and beard.
+        box(out, t, -0.19D, 1.57D, -0.10D, 0.19D, 1.70D, 0.12D, 0xFF6C777E);
+        box(out, t, -0.04D, 1.67D, -0.055D, 0.04D, 1.84D, 0.055D, 0xFFB94B36);
+        box(out, t, -0.105D, 1.39D, 0.105D, 0.105D, 1.50D, 0.18D, 0xFF8E4B2D);
+        box(out, t, -0.085D, 1.53D, 0.16D, -0.035D, 1.555D, 0.176D, 0xFF211B1A);
+        box(out, t, 0.035D, 1.53D, 0.16D, 0.085D, 1.555D, 0.176D, 0xFF211B1A);
+
+        Vec3 leftShoulder = new Vec3(-0.28D, 1.24D, 0.0D);
+        Vec3 leftElbow = new Vec3(-0.36D, 1.02D, 0.15D);
+        Vec3 leftHand = new Vec3(-0.32D, 0.88D, 0.22D);
+        renderLimb(out, t, leftShoulder, leftElbow, 0.115D, 0xFF8C3029);
+        renderLimb(out, t, leftElbow, leftHand, 0.075D, 0xFFD09C72);
+        sphere(out, t, leftHand.x, leftHand.y, leftHand.z, 0.08D, 0xFFD09C72, 8, 5);
+
+        float wind = smooth01((age - AXE_APPROACH_TICK) / 11.0F);
+        float strike = smooth01((age - AXE_WINDUP_TICK) / 15.0F);
+        float recover = smooth01((age - (AXE_IMPACT_TICK + 4.0F)) / 13.0F);
+        Vec3 shoulder = new Vec3(0.28D, 1.24D, 0.0D);
+        Vec3 elbowStart = new Vec3(0.38D, 1.08D, 0.12D);
+        Vec3 handStart = new Vec3(0.39D, 0.92D, 0.20D);
+        Vec3 elbowRaised = new Vec3(0.42D, 1.56D, -0.12D);
+        Vec3 handRaised = new Vec3(0.48D, 1.78D, -0.15D);
+        Vec3 elbowStrike = new Vec3(0.38D, 1.06D, 0.32D);
+        Vec3 handStrike = new Vec3(0.34D, 0.72D, 0.60D);
+        Vec3 elbow = mix(mix(elbowStart, elbowRaised, wind), elbowStrike, strike);
+        Vec3 hand = mix(mix(handStart, handRaised, wind), handStrike, strike);
+        elbow = mix(elbow, elbowStart, recover);
+        hand = mix(hand, handStart, recover);
+        renderLimb(out, t, shoulder, elbow, 0.13D, 0xFF8C3029);
+        renderLimb(out, t, elbow, hand, 0.085D, 0xFFD09C72);
+        sphere(out, t, hand.x, hand.y, hand.z, 0.085D, 0xFFD09C72, 8, 5);
+
+        Vec3 axeTop = hand.add(0.0D, 0.56D, 0.025D);
+        renderLimb(out, t, hand, axeTop, 0.035D, 0xFF493023);
+        box(out, t, axeTop.x - 0.22D, axeTop.y - 0.11D, axeTop.z - 0.06D,
+                axeTop.x + 0.06D, axeTop.y + 0.13D, axeTop.z + 0.06D, 0xFFBBC4C8);
+        box(out, t, axeTop.x - 0.28D, axeTop.y - 0.04D, axeTop.z - 0.045D,
+                axeTop.x - 0.20D, axeTop.y + 0.07D, axeTop.z + 0.045D, 0xFF7D8A91);
     }
 
     private static void renderMagnus(VertexConsumer out, BoardTransform t, int age) {
