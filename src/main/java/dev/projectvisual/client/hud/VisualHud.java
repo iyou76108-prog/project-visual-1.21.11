@@ -22,6 +22,8 @@ public final class VisualHud {
     private static final Deque<Long> rightClicks = new ArrayDeque<>();
     private static final Deque<Notification> notifications = new ArrayDeque<>();
     private static long damageFlashUntil;
+    private static int totemPops;
+    private static Object lastWorld;
 
     private record Notification(String text, long expiresAt) {}
 
@@ -36,7 +38,11 @@ public final class VisualHud {
     }
 
     public static void triggerDamageFlash() {
-        damageFlashUntil = System.currentTimeMillis() + 420L;
+        damageFlashUntil = System.currentTimeMillis() + 520L;
+    }
+
+    public static void recordTotemPop() {
+        totemPops++;
     }
 
     public static void notifyToggle(String name, boolean active) {
@@ -74,10 +80,22 @@ public final class VisualHud {
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
 
+        if (lastWorld != mc.level) {
+            lastWorld = mc.level;
+            totemPops = 0;
+        }
         if (VisualFeatures.isEnabled("Damage Tint") && now < damageFlashUntil) {
-            float remaining = (float) (damageFlashUntil - now) / 420.0F;
-            int alpha = Math.max(0, Math.min(72, (int) (remaining * 72.0F)));
-            g.fill(0, 0, screenWidth, screenHeight, (alpha << 24) | 0x00F04444);
+            float remaining = Math.max(0.0F, Math.min(1.0F, (float) (damageFlashUntil - now) / 520.0F));
+            for (int layer = 0; layer < 6; layer++) {
+                int alpha = Math.max(0, (int) (remaining * (54 - layer * 8)));
+                int tint = (alpha << 24) | 0x00F04444;
+                int inset = layer * 7;
+                int band = 7;
+                g.fill(0, inset, screenWidth, inset + band, tint);
+                g.fill(0, screenHeight - inset - band, screenWidth, screenHeight - inset, tint);
+                g.fill(inset, 0, inset + band, screenHeight, tint);
+                g.fill(screenWidth - inset - band, 0, screenWidth - inset, screenHeight, tint);
+            }
         }
         if (VisualFeatures.isEnabled("Ambience")) {
             g.fill(0, 0, screenWidth, screenHeight, 0x0B9B7BFF);
@@ -121,19 +139,35 @@ public final class VisualHud {
         if (VisualFeatures.isEnabled("Target HUD") || VisualFeatures.isEnabled("Target Info")) {
             var target = mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit
                     ? hit.getEntity() : null;
-            if (target != null && target.isAlive()) {
-                String label = target.getName().getString();
+            if (target != null && target.isAlive() && target != mc.player) {
+                int cardW = 158;
+                int cardH = 52;
+                int bx = screenWidth - cardW - 12;
+                int by = screenHeight - cardH - 14;
+                g.fill(bx, by, bx + cardW, by + cardH, PANEL);
+                g.fill(bx, by, bx + 2, by + cardH, VisualFeatures.accentColor());
+                String name = target.getName().getString();
+                while (mc.font.width(name) > cardW - 62 && name.length() > 5) {
+                    name = name.substring(0, name.length() - 4) + "...";
+                }
+                g.drawString(mc.font, name, bx + 9, by + 7, TEXT, false);
+                String distance = String.format(java.util.Locale.ROOT, "%.1fm", mc.player.distanceTo(target));
+                g.drawString(mc.font, distance, bx + cardW - mc.font.width(distance) - 8, by + 7, MUTED, false);
                 if (target instanceof net.minecraft.world.entity.LivingEntity living) {
-                    label += "  " + String.format(java.util.Locale.ROOT, "%.1f", living.getHealth()) + " HP";
-                }
-                if (VisualFeatures.isEnabled("Target HUD")) {
-                    line(g, mc, "TARGET  " + label, x, yy);
-                    yy += 17;
-                }
-                if (VisualFeatures.isEnabled("Target Info")) {
-                    line(g, mc, "DIST  " + String.format(java.util.Locale.ROOT, "%.1f",
-                            mc.player.distanceTo(target)) + "m", x, yy);
-                    yy += 17;
+                    float maxHealth = Math.max(1.0F, living.getMaxHealth());
+                    float health = Math.max(0.0F, Math.min(maxHealth, living.getHealth()));
+                    String hp = String.format(java.util.Locale.ROOT, "%.1f / %.1f HP", health, maxHealth);
+                    g.drawString(mc.font, hp, bx + 9, by + 20, TEXT, false);
+                    int barX = bx + 9;
+                    int barY = by + 34;
+                    int barW = cardW - 18;
+                    g.fill(barX, barY, barX + barW, barY + 5, 0xFF393545);
+                    int fillW = Math.max(0, Math.min(barW, Math.round(barW * health / maxHealth)));
+                    if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 5, 0xFF57D99A);
+                    String armor = "ARMOR " + living.getArmorValue();
+                    g.drawString(mc.font, armor, bx + 9, by + 41, MUTED, false);
+                } else {
+                    g.drawString(mc.font, "ENTITY", bx + 9, by + 25, MUTED, false);
                 }
             }
         }
@@ -162,7 +196,11 @@ public final class VisualHud {
             for (ItemStack stack : mc.player.getInventory().getNonEquipmentItems()) {
                 if (stack.is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING)) count += stack.getCount();
             }
-            line(g, mc, "TOTEMS  " + count, x, yy);
+            ItemStack offhandTotem = mc.player.getOffhandItem();
+            if (offhandTotem.is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING)) {
+                count += offhandTotem.getCount();
+            }
+            line(g, mc, "TOTEMS  " + count + "   POPS  " + totemPops, x, yy);
         }
 
         if (VisualFeatures.isEnabled("Array List") || VisualFeatures.isEnabled("Module List")) {
@@ -180,16 +218,21 @@ public final class VisualHud {
             }
         }
 
-        if (VisualFeatures.isEnabled("Crosshair")) {
+        boolean customCrosshair = VisualFeatures.isEnabled("Crosshair") || VisualFeatures.isEnabled("Hit Color");
+        if (customCrosshair) {
             int cx = screenWidth / 2;
             int cy = screenHeight / 2;
             int color = VisualFeatures.accentColor();
-            if (VisualFeatures.isEnabled("Hit Color")) {
-                color = mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult
-                        ? 0xFF57E39A : 0xFFFF646E;
+            if (VisualFeatures.isEnabled("Hit Color")
+                    && mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult entityHit
+                    && entityHit.getEntity().isAlive()) {
+                color = 0xFF58E6A0;
             }
-            g.fill(cx - 5, cy, cx + 5, cy + 1, color);
-            g.fill(cx, cy - 5, cx + 1, cy + 5, color);
+            g.fill(cx - 1, cy - 7, cx + 1, cy - 3, color);
+            g.fill(cx - 1, cy + 3, cx + 1, cy + 7, color);
+            g.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
+            g.fill(cx + 3, cy - 1, cx + 7, cy + 1, color);
+            g.fill(cx - 1, cy - 1, cx + 1, cy + 1, color);
         }
 
         if (VisualFeatures.isEnabled("Notifications")) {
