@@ -125,7 +125,7 @@ public final class VisualWorldEffects {
         boolean drawBreadcrumbs = VisualFeatures.isEnabled("Breadcrumbs");
         if (!drawHitboxes && !drawTrails && !drawBreadcrumbs) return;
 
-        Vec3 camera = client.gameRenderer.getMainCamera().getPosition();
+        Vec3 camera = client.gameRenderer.getMainCamera().position();
         VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
 
         if (drawHitboxes) {
