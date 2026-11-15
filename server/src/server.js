@@ -323,7 +323,7 @@ async function handleApi(req, res, url) {
     return reply(res, 201, { requestId: request.id, sentTo: publicUser(target) });
   }
 
-  const acceptRequest = url.pathname.match(/^\\/api\\/friend-requests\\/([0-9a-f-]+)\\/accept$/i);
+  const acceptRequest = url.pathname.match(new RegExp("^/api/friend-requests/([0-9a-f-]+)/accept$", "i"));
   if (req.method === "POST" && acceptRequest) {
     const request = store.friendRequests.find(item =>
       item.id === acceptRequest[1] && item.toId === user.id && item.status === "pending");
@@ -338,7 +338,7 @@ async function handleApi(req, res, url) {
     return reply(res, 200, { accepted: true, friend: publicUser(sender) });
   }
 
-  const declineRequest = url.pathname.match(/^\\/api\\/friend-requests\\/([0-9a-f-]+)\\/decline$/i);
+  const declineRequest = url.pathname.match(new RegExp("^/api/friend-requests/([0-9a-f-]+)/decline$", "i"));
   if (req.method === "POST" && declineRequest) {
     const request = store.friendRequests.find(item =>
       item.id === declineRequest[1] && item.toId === user.id && item.status === "pending");
@@ -396,7 +396,7 @@ async function handleApi(req, res, url) {
     return reply(res, 201, { inviteId: invite.id, sentTo: publicUser(friend) });
   }
 
-  const acceptInvite = url.pathname.match(/^\\/api\\/invites\\/([0-9a-f-]+)\\/accept$/i);
+  const acceptInvite = url.pathname.match(new RegExp("^/api/invites/([0-9a-f-]+)/accept$", "i"));
   if (req.method === "POST" && acceptInvite) {
     const invite = store.invites.find(item =>
       item.id === acceptInvite[1] && item.toId === user.id && item.status === "pending"
@@ -409,7 +409,7 @@ async function handleApi(req, res, url) {
     return reply(res, 200, { accepted: true, matchId: match.id, fen: match.game.fen() });
   }
 
-  const declineInvite = url.pathname.match(/^\\/api\\/invites\\/([0-9a-f-]+)\\/decline$/i);
+  const declineInvite = url.pathname.match(new RegExp("^/api/invites/([0-9a-f-]+)/decline$", "i"));
   if (req.method === "POST" && declineInvite) {
     const invite = store.invites.find(item =>
       item.id === declineInvite[1] && item.toId === user.id && item.status === "pending");
@@ -421,7 +421,7 @@ async function handleApi(req, res, url) {
     return reply(res, 200, { declined: true });
   }
 
-  const matchRoute = url.pathname.match(/^\\/api\\/matches\\/([0-9a-f-]+)$/i);
+  const matchRoute = url.pathname.match(new RegExp("^/api/matches/([0-9a-f-]+)$", "i"));
   if (req.method === "GET" && matchRoute) {
     const match = matches.get(matchRoute[1]);
     if (!match || ![match.whiteId, match.blackId].includes(user.id)) {
