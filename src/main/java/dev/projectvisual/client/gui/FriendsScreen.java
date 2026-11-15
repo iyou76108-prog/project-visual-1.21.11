@@ -3,6 +3,7 @@ package dev.projectvisual.client.gui;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import dev.projectvisual.client.network.GlobalServiceClient;
+import dev.projectvisual.client.chess.OnlineChessScreen;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
@@ -187,7 +188,18 @@ public final class FriendsScreen extends Screen {
                 if (event.x() >= right + colWidth - 50 && event.x() <= right + colWidth - 6
                         && event.y() >= y - 3 && event.y() <= y + 15) {
                     String id = incomingInvites.get(i).get("id").getAsString();
-                    runAction(GlobalServiceClient.get().acceptInvite(id), "Chess invitation accepted.");
+                    GlobalServiceClient.get().acceptInvite(id).whenComplete((response, error) ->
+                            Minecraft.getInstance().execute(() -> {
+                                if (error != null) {
+                                    status = message(error);
+                                } else {
+                                    String matchId = response.get("matchId").getAsString();
+                                    String color = "white";
+                                    String fen = response.get("fen").getAsString();
+                                    Minecraft.getInstance().setScreen(
+                                            new OnlineChessScreen(matchId, color, fen, "Friend"));
+                                }
+                            }));
                     return true;
                 }
             }

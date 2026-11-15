@@ -177,6 +177,61 @@ public final class ChessGame {
         return out.toString();
     }
 
+
+    /** Restore a server-authoritative position received as a standard FEN string. */
+    public static ChessGame fromFen(String fen) {
+        if (fen == null) throw new IllegalArgumentException("FEN is required");
+        String[] fields = fen.trim().split("\\s+");
+        if (fields.length < 4) throw new IllegalArgumentException("Invalid FEN");
+        String[] ranks = fields[0].split("/");
+        if (ranks.length != 8) throw new IllegalArgumentException("Invalid FEN board");
+
+        ChessGame game = new ChessGame();
+        game.board = new char[64];
+        for (int row = 0; row < 8; row++) {
+            int col = 0;
+            for (int i = 0; i < ranks[row].length(); i++) {
+                char symbol = ranks[row].charAt(i);
+                if (symbol >= '1' && symbol <= '8') {
+                    col += symbol - '0';
+                } else if ("pnbrqkPNBRQK".indexOf(symbol) >= 0 && col < 8) {
+                    game.board[row * 8 + col++] = symbol;
+                } else {
+                    throw new IllegalArgumentException("Invalid FEN piece placement");
+                }
+            }
+            if (col != 8) throw new IllegalArgumentException("Invalid FEN rank width");
+        }
+        game.whiteToMove = fields[1].equals("w");
+        if (!game.whiteToMove && !fields[1].equals("b")) {
+            throw new IllegalArgumentException("Invalid FEN active color");
+        }
+        game.castlingRights = 0;
+        if (!fields[2].equals("-")) {
+            if (fields[2].contains("K")) game.castlingRights |= WHITE_KING_SIDE;
+            if (fields[2].contains("Q")) game.castlingRights |= WHITE_QUEEN_SIDE;
+            if (fields[2].contains("k")) game.castlingRights |= BLACK_KING_SIDE;
+            if (fields[2].contains("q")) game.castlingRights |= BLACK_QUEEN_SIDE;
+        }
+        game.enPassantSquare = fields[3].equals("-") ? -1 : parseSquare(fields[3]);
+        game.halfmoveClock = fields.length > 4 ? Integer.parseInt(fields[4]) : 0;
+        game.fullmoveNumber = fields.length > 5 ? Integer.parseInt(fields[5]) : 1;
+        if (game.findKing(true) < 0 || game.findKing(false) < 0) {
+            throw new IllegalArgumentException("FEN must contain both kings");
+        }
+        game.undoStack.clear();
+        game.positionHistory.clear();
+        game.positionHistory.add(game.positionKey());
+        return game;
+    }
+
+    private static int parseSquare(String name) {
+        if (name == null || !name.matches("[a-h][1-8]")) {
+            throw new IllegalArgumentException("Invalid chess square");
+        }
+        return ('8' - name.charAt(1)) * 8 + name.charAt(0) - 'a';
+    }
+
     private ChessGame copyPositionOnly() {
         ChessGame copy = new ChessGame();
         copy.board = board.clone();
