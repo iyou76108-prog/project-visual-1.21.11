@@ -98,9 +98,11 @@ public final class ChessWorldGame {
     private static final int AXE_WINDUP_TICK = 52;
     private static final int AXE_IMPACT_TICK = 72;
     private static final int AXE_SCENE_DURATION = 116;
+    private static final int WATCHER_SUCK_TICK = 106;
+    private static final int WATCHER_SCENE_DURATION = 164;
     private static int afkIdleTicks;
     private static int afkSceneTick = -1;
-    private static int afkSceneType; // 1 = Magnus throws a king, 2 = Axe rushes and swings
+    private static int afkSceneType; // 1 = Magnus, 2 = Axe, 3 = Watcher void pull
     private static boolean afkEventPlayed;
     private static boolean afkTracking;
     private static Vec3 afkLastPosition = Vec3.ZERO;
@@ -113,6 +115,10 @@ public final class ChessWorldGame {
     private static Vec3 axeEndPosition = Vec3.ZERO;
     private static Vec3 axeRight = new Vec3(1, 0, 0);
     private static Vec3 axeForward = new Vec3(0, 0, 1);
+    private static Vec3 watcherStartPosition = Vec3.ZERO;
+    private static Vec3 watcherEndPosition = Vec3.ZERO;
+    private static Vec3 watcherRight = new Vec3(1, 0, 0);
+    private static Vec3 watcherForward = new Vec3(0, 0, 1);
     private static int invokerPhraseIndex = -1;
 
     private ChessWorldGame() {}
@@ -164,6 +170,11 @@ public final class ChessWorldGame {
 
     public static boolean isActive() {
         return active;
+    }
+
+    /** True only during the final third-person disappearance of the Watcher AFK scene. */
+    public static boolean isWatcherSucking() {
+        return afkSceneType == 3 && afkSceneTick >= WATCHER_SUCK_TICK;
     }
 
     public static void stop() {
@@ -464,7 +475,8 @@ public final class ChessWorldGame {
 
         boolean magnusEnabled = VisualFeatures.isEnabled("Magnus AFK");
         boolean axeEnabled = VisualFeatures.isEnabled("Axe AFK");
-        if (!magnusEnabled && !axeEnabled) {
+        boolean watcherEnabled = VisualFeatures.isEnabled("Watcher AFK");
+        if (!magnusEnabled && !axeEnabled && !watcherEnabled) {
             resetAfkTracking();
             return;
         }
@@ -503,9 +515,15 @@ public final class ChessWorldGame {
                 spawnAfkImpact(client, 0.95D);
             } else if (afkSceneType == 2 && afkSceneTick == AXE_IMPACT_TICK) {
                 spawnAfkImpact(client, 1.38D);
+            } else if (afkSceneType == 3 && afkSceneTick == WATCHER_SUCK_TICK) {
+                spawnWatcherVoidEffect(client);
             }
 
-            int duration = afkSceneType == 2 ? AXE_SCENE_DURATION : AFK_SCENE_DURATION;
+            if (afkSceneType == 3 && (afkSceneTick % 4) == 0) {
+                spawnWatcherSuctionParticles(client);
+            }
+            int duration = afkSceneType == 2 ? AXE_SCENE_DURATION
+                    : afkSceneType == 3 ? WATCHER_SCENE_DURATION : AFK_SCENE_DURATION;
             if (afkSceneTick > duration) {
                 afkSceneTick = -1;
                 afkSceneType = 0;
@@ -515,14 +533,24 @@ public final class ChessWorldGame {
 
         if (!afkEventPlayed) afkIdleTicks++;
         if (afkIdleTicks >= AFK_IDLE_TICKS && !afkEventPlayed) {
-            if (magnusEnabled && axeEnabled) {
-                if (ThreadLocalRandom.current().nextBoolean()) beginMagnusAfkScene(client);
-                else beginAxeAfkScene(client);
-            } else if (axeEnabled) {
-                beginAxeAfkScene(client);
-            } else {
-                beginMagnusAfkScene(client);
+            int enabledScenes = (magnusEnabled ? 1 : 0) + (axeEnabled ? 1 : 0)
+                    + (watcherEnabled ? 1 : 0);
+            int choice = ThreadLocalRandom.current().nextInt(enabledScenes);
+            if (magnusEnabled) {
+                if (choice == 0) {
+                    beginMagnusAfkScene(client);
+                    return;
+                }
+                choice--;
             }
+            if (axeEnabled) {
+                if (choice == 0) {
+                    beginAxeAfkScene(client);
+                    return;
+                }
+                choice--;
+            }
+            beginWatcherAfkScene(client);
         }
     }
 
@@ -576,6 +604,62 @@ public final class ChessWorldGame {
                 false);
     }
 
+    private static void beginWatcherAfkScene(Minecraft client) {
+        Vec3 playerPosition = client.player.position();
+        double yaw = Math.toRadians(client.player.getYRot());
+        Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+        Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+
+        watcherStartPosition = playerPosition.add(playerForward.scale(6.2D))
+                .add(playerRight.scale(-0.35D));
+        watcherEndPosition = playerPosition.add(playerForward.scale(1.25D))
+                .add(playerRight.scale(-0.12D));
+        Vec3 towardPlayer = playerPosition.subtract(watcherStartPosition).normalize();
+        double facingYaw = Math.atan2(-towardPlayer.x, towardPlayer.z);
+        watcherForward = new Vec3(-Math.sin(facingYaw), 0.0D, Math.cos(facingYaw)).normalize();
+        watcherRight = new Vec3(Math.cos(facingYaw), 0.0D, Math.sin(facingYaw)).normalize();
+
+        afkIdleTicks = AFK_IDLE_TICKS;
+        afkEventPlayed = true;
+        afkSceneType = 3;
+        afkSceneTick = 0;
+        client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§5СМОТРЯЩИЙ §7— Пора покинуть этот мир..."),
+                false);
+    }
+
+    private static void spawnWatcherSuctionParticles(Minecraft client) {
+        if (client.level == null || client.player == null) return;
+        Vec3 playerPosition = client.player.position();
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        double angle = random.nextDouble(Math.PI * 2.0D);
+        double radius = 0.55D + random.nextDouble() * 0.95D;
+        double x = playerPosition.x + Math.cos(angle) * radius;
+        double z = playerPosition.z + Math.sin(angle) * radius;
+        double y = playerPosition.y + 0.25D + random.nextDouble() * 1.55D;
+        Vec3 towardVoid = playerPosition.add(0.0D, -0.15D, 0.0D)
+                .subtract(x, y, z).normalize().scale(0.075D);
+        client.level.addParticle(ParticleTypes.PORTAL, x, y, z,
+                towardVoid.x, towardVoid.y - 0.035D, towardVoid.z);
+    }
+
+    private static void spawnWatcherVoidEffect(Minecraft client) {
+        if (client.level == null || client.player == null) return;
+        Vec3 position = client.player.position().add(0.0D, 0.18D, 0.0D);
+        for (int i = 0; i < 40; i++) {
+            double angle = Math.PI * 2.0D * i / 40.0D;
+            double radius = 0.55D + (i % 3) * 0.18D;
+            client.level.addParticle(ParticleTypes.PORTAL,
+                    position.x + Math.cos(angle) * radius, position.y + (i % 4) * 0.16D,
+                    position.z + Math.sin(angle) * radius,
+                    -Math.cos(angle) * 0.11D, -0.12D, -Math.sin(angle) * 0.11D);
+        }
+        client.level.addParticle(ParticleTypes.POOF, position.x, position.y, position.z, 0, 0.08D, 0);
+        client.player.displayClientMessage(
+                net.minecraft.network.chat.Component.literal("§5§lТЕБЯ ЗАМЕТИЛИ"),
+                true);
+    }
+
     private static void beginAxeAfkScene(Minecraft client) {
         Vec3 playerPosition = client.player.position();
         double yaw = Math.toRadians(client.player.getYRot());
@@ -607,9 +691,12 @@ public final class ChessWorldGame {
                 && thirdPerson && client.player.isAlive();
         boolean invokerSkin = VisualFeatures.isEnabled("Invoker Skin")
                 && thirdPerson && client.player.isAlive();
+        boolean interworlderMask = VisualFeatures.isEnabled("Interworlder Mask")
+                && thirdPerson && client.player.isAlive();
         boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
         boolean axeScene = afkSceneType == 2 && afkSceneTick >= 0;
-        if (!queenSkin && !invokerSkin && !magnusScene && !axeScene) return;
+        boolean watcherScene = afkSceneType == 3 && afkSceneTick >= 0;
+        if (!queenSkin && !invokerSkin && !interworlderMask && !magnusScene && !axeScene && !watcherScene) return;
 
         VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
 
@@ -625,6 +712,10 @@ public final class ChessWorldGame {
         } else if (queenSkin) {
             BoardTransform queenTransform = new BoardTransform(relative, playerRight, playerForward, 2.85F, 0.0D);
             renderPiece(out, queenTransform, 0.0F, 0.0F, 'Q', 0.0F);
+        }
+        if (interworlderMask) {
+            BoardTransform maskTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            renderInterworlderMask(out, maskTransform);
         }
 
         if (magnusScene) {
@@ -662,6 +753,54 @@ public final class ChessWorldGame {
                     Math.sin(afkSceneTick * 0.19D) * 0.012D);
             renderAxe(out, axeTransform, afkSceneTick);
         }
+
+        if (watcherScene) {
+            float approach = smooth01(afkSceneTick / 92.0F);
+            Vec3 actorPosition = mix(watcherStartPosition, watcherEndPosition, approach).subtract(camera);
+            float size = 1.0F + smooth01((afkSceneTick - 34.0F) / 105.0F) * 0.62F;
+            BoardTransform watcherTransform = new BoardTransform(actorPosition, watcherRight, watcherForward,
+                    size, Math.sin(afkSceneTick * 0.055D) * 0.018D);
+            renderWatcher(out, watcherTransform, afkSceneTick);
+
+            float pull = smooth01((afkSceneTick - 62.0F) / 82.0F);
+            if (pull > 0.0F) {
+                BoardTransform voidTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+                cylinder(out, voidTransform, 0.0D, 0.0D, 0.015D, 0.055D,
+                        0.18D + pull * 1.20D, 0xFF120D20, 32);
+                cylinder(out, voidTransform, 0.0D, 0.0D, 0.056D, 0.072D,
+                        0.12D + pull * 0.93D, 0xFF54318B, 32);
+                cylinder(out, voidTransform, 0.0D, 0.0D, 0.073D, 0.083D,
+                        0.06D + pull * 0.58D, 0xFF080610, 32);
+            }
+        }
+    }
+
+    private static void renderInterworlderMask(VertexConsumer out, BoardTransform t) {
+        // Ash-grey voxel mask worn over the player's face, with the canonical purple glow.
+        box(out, t, -0.178D, 1.445D, 0.112D, 0.178D, 1.775D, 0.235D, 0xFF595963);
+        box(out, t, -0.158D, 1.466D, 0.236D, 0.158D, 1.748D, 0.258D, 0xFF34343F);
+        box(out, t, -0.195D, 1.490D, 0.145D, -0.165D, 1.690D, 0.235D, 0xFF777781);
+        box(out, t, 0.165D, 1.490D, 0.145D, 0.195D, 1.690D, 0.235D, 0xFF777781);
+
+        // Raised cheek plates and bridge.
+        box(out, t, -0.16D, 1.455D, 0.255D, -0.075D, 1.535D, 0.282D, 0xFF6D6D79);
+        box(out, t, 0.075D, 1.455D, 0.255D, 0.16D, 1.535D, 0.282D, 0xFF6D6D79);
+        box(out, t, -0.026D, 1.525D, 0.255D, 0.026D, 1.665D, 0.287D, 0xFF85818E);
+
+        // Violet eye openings and thin runic lines that climb toward the forehead.
+        box(out, t, -0.132D, 1.615D, 0.281D, -0.056D, 1.694D, 0.296D, 0xFF7D2FE0);
+        box(out, t, 0.056D, 1.615D, 0.281D, 0.132D, 1.694D, 0.296D, 0xFF7D2FE0);
+        box(out, t, -0.115D, 1.635D, 0.297D, -0.074D, 1.675D, 0.305D, 0xFFEBA6FF);
+        box(out, t, 0.074D, 1.635D, 0.297D, 0.115D, 1.675D, 0.305D, 0xFFEBA6FF);
+        box(out, t, -0.12D, 1.690D, 0.282D, -0.095D, 1.746D, 0.296D, 0xFF9C4BFF);
+        box(out, t, 0.095D, 1.690D, 0.282D, 0.12D, 1.746D, 0.296D, 0xFF9C4BFF);
+        box(out, t, -0.095D, 1.735D, 0.283D, -0.04D, 1.758D, 0.298D, 0xFF9C4BFF);
+        box(out, t, 0.04D, 1.735D, 0.283D, 0.095D, 1.758D, 0.298D, 0xFF9C4BFF);
+
+        // A narrow glowing mouth and small metal clasps at the temples.
+        box(out, t, -0.105D, 1.485D, 0.282D, 0.105D, 1.505D, 0.299D, 0xFFB84CFF);
+        box(out, t, -0.17D, 1.535D, 0.22D, -0.148D, 1.572D, 0.245D, 0xFFC4BFD0);
+        box(out, t, 0.148D, 1.535D, 0.22D, 0.17D, 1.572D, 0.245D, 0xFFC4BFD0);
     }
 
     private static void renderInvoker(VertexConsumer out, BoardTransform t, long gameTime) {
@@ -760,6 +899,54 @@ public final class ChessWorldGame {
             sphere(out, t, x - 0.028D, y + 0.038D, z + 0.062D,
                     0.036D, 0xFFFFF4DF, 10, 7);
         }
+    }
+
+    private static void renderWatcher(VertexConsumer out, BoardTransform t, int age) {
+        // The Watcher: a tall, featureless shadow in a hooded coat with white eyes and fur trim.
+        cone(out, t, 0.0D, -0.02D, 0.02D, 1.60D, 0.73D, 0xFF090B14, 28);
+        box(out, t, -0.38D, 0.74D, -0.14D, 0.38D, 1.42D, 0.16D, 0xFF121521);
+        box(out, t, -0.30D, 0.18D, 0.145D, 0.30D, 0.72D, 0.18D, 0xFF05070D);
+
+        // Wide hood and completely dark face.
+        sphere(out, t, 0.0D, 1.69D, -0.015D, 0.43D, 0xFF171A29, 18, 12);
+        sphere(out, t, 0.0D, 1.68D, 0.245D, 0.305D, 0xFF020308, 18, 12);
+        box(out, t, -0.17D, 1.665D, 0.523D, -0.055D, 1.704D, 0.542D, 0xFFF7F5FF);
+        box(out, t, 0.055D, 1.665D, 0.523D, 0.17D, 1.704D, 0.542D, 0xFFF7F5FF);
+        box(out, t, -0.145D, 1.675D, 0.543D, -0.082D, 1.694D, 0.548D, 0xFFFFFFFF);
+        box(out, t, 0.082D, 1.675D, 0.543D, 0.145D, 1.694D, 0.548D, 0xFFFFFFFF);
+
+        // Pale fur framing the hood.
+        for (int i = 0; i <= 12; i++) {
+            double angle = Math.PI * (0.12D + 0.76D * i / 12.0D);
+            double x = Math.cos(angle) * 0.36D;
+            double y = 1.70D + Math.sin(angle) * 0.34D;
+            sphere(out, t, x, y, 0.12D + Math.sin(angle) * 0.06D,
+                    0.052D, 0xFFD8D7E1, 9, 6);
+        }
+
+        // Long black sleeves with white fur cuffs and coat buttons.
+        Vec3 leftShoulder = new Vec3(-0.31D, 1.30D, 0.0D);
+        Vec3 leftElbow = new Vec3(-0.48D, 1.02D, 0.12D);
+        Vec3 leftHand = new Vec3(-0.45D, 0.82D, 0.23D);
+        renderLimb(out, t, leftShoulder, leftElbow, 0.145D, 0xFF10131E);
+        renderLimb(out, t, leftElbow, leftHand, 0.09D, 0xFF0A0C15);
+        sphere(out, t, leftHand.x, leftHand.y, leftHand.z, 0.075D, 0xFF020308, 9, 6);
+        Vec3 rightShoulder = new Vec3(0.31D, 1.30D, 0.0D);
+        Vec3 rightElbow = new Vec3(0.48D, 1.02D, 0.12D);
+        Vec3 rightHand = new Vec3(0.45D, 0.82D, 0.23D);
+        renderLimb(out, t, rightShoulder, rightElbow, 0.145D, 0xFF10131E);
+        renderLimb(out, t, rightElbow, rightHand, 0.09D, 0xFF0A0C15);
+        sphere(out, t, rightHand.x, rightHand.y, rightHand.z, 0.075D, 0xFF020308, 9, 6);
+
+        for (int i = 0; i < 4; i++) {
+            double y = 1.05D - i * 0.19D;
+            sphere(out, t, 0.0D, y, 0.19D, 0.035D, 0xFFD9D8E2, 8, 5);
+        }
+
+        // A cold purple aura pulses as the Watcher closes the distance.
+        double pulse = 0.5D + 0.5D * Math.sin(age * 0.12D);
+        int aura = 0x604B27FF | ((int) (pulse * 70.0D) << 24);
+        sphere(out, t, 0.0D, 1.68D, 0.30D, 0.34D, aura, 14, 8);
     }
 
     private static void renderAxe(VertexConsumer out, BoardTransform t, int age) {
