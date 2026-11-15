@@ -9,10 +9,26 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.item.ItemStack;
 import java.util.Map;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import org.lwjgl.glfw.GLFW;
 
 public final class VisualHud {
     private static final int PANEL=0xC910121B, ACCENT=0xFF9B7BFF, TEXT=0xFFF3F0FF, MUTED=0xFFAAA6BA;
     private static boolean enabled=true;
+    private static final Deque<Long> leftClicks=new ArrayDeque<>(), rightClicks=new ArrayDeque<>();
+    private static boolean lastLeft=false,lastRight=false;
+    private static void sampleClicks(Minecraft mc) {
+        long window=mc.getWindow().getWindow();
+        boolean left=GLFW.glfwGetMouseButton(window,GLFW.GLFW_MOUSE_BUTTON_LEFT)==GLFW.GLFW_PRESS;
+        boolean right=GLFW.glfwGetMouseButton(window,GLFW.GLFW_MOUSE_BUTTON_RIGHT)==GLFW.GLFW_PRESS;
+        long now=System.currentTimeMillis();
+        if(left&&!lastLeft)leftClicks.addLast(now);
+        if(right&&!lastRight)rightClicks.addLast(now);
+        lastLeft=left; lastRight=right;
+        while(!leftClicks.isEmpty()&&now-leftClicks.peekFirst()>1000)leftClicks.removeFirst();
+        while(!rightClicks.isEmpty()&&now-rightClicks.peekFirst()>1000)rightClicks.removeFirst();
+    }
     private VisualHud(){}
     public static boolean isEnabled(){return enabled;}
     public static void setEnabled(boolean value){enabled=value;}
@@ -28,6 +44,7 @@ public final class VisualHud {
     private static void render(GuiGraphics g,net.minecraft.client.DeltaTracker tickCounter){
         Minecraft mc=Minecraft.getInstance();
         if(!enabled||mc.options.hideGui||mc.player==null||mc.level==null)return;
+        sampleClicks(mc);
         int x=10,y=10;
         if(VisualFeatures.isEnabled("Watermark")){
             g.fill(x,y,x+142,y+40,PANEL); g.fill(x,y,x+2,y+40,ACCENT);
@@ -45,6 +62,17 @@ public final class VisualHud {
                 (mc.options.keyDown.isDown()?"S ":"_ ")+(mc.options.keyRight.isDown()?"D":"_");
             line(g,mc,"KEYS  "+keys,x,yy); yy+=17;
             line(g,mc,"JUMP "+(mc.options.keyJump.isDown()?"ON":"OFF"),x,yy); yy+=17;
+        }
+        if(VisualFeatures.isEnabled("CPS Counter")){
+            line(g,mc,"CPS  L "+leftClicks.size()+"  R "+rightClicks.size(),x,yy); yy+=17;
+        }
+        if(VisualFeatures.isEnabled("Target HUD")||VisualFeatures.isEnabled("Target Info")){
+            var target=mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit ? hit.getEntity() : null;
+            if(target!=null && target.isAlive()){
+                String label=target.getName().getString()+"  "+String.format(java.util.Locale.ROOT,"%.1f",target.getHealth())+" HP";
+                if(VisualFeatures.isEnabled("Target HUD")){line(g,mc,"TARGET  "+label,x,yy); yy+=17;}
+                if(VisualFeatures.isEnabled("Target Info")){line(g,mc,"DIST  "+String.format(java.util.Locale.ROOT,"%.1f",mc.player.distanceTo(target))+"m",x,yy); yy+=17;}
+            }
         }
         if(VisualFeatures.isEnabled("Armor HUD")){
             StringBuilder armor=new StringBuilder("ARMOR  ");
