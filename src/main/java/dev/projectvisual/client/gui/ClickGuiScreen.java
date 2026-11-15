@@ -1,6 +1,7 @@
 package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
+import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.Component;
@@ -82,14 +83,22 @@ public final class ClickGuiScreen extends Screen {
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
-                boolean live=category==0&&n==0;
+                boolean live=(category==0&&n==0)||(category==7);
                 boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
                 g.fill(cx,cy,cx+2,cy+48,live?ACCENT:0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
-                String state=live?(VisualHud.isEnabled()?"ON":"OFF"):"COMING SOON";
-                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,live&&VisualHud.isEnabled()?0xFF83E0B0:ACCENT,false);
+                String state = "COMING SOON";
+                boolean active = false;
+                if (category == 0 && n == 0) { state = VisualHud.isEnabled() ? "ON" : "OFF"; active = VisualHud.isEnabled(); }
+                if (category == 7 && n == 0) { state = VisualFeatures.isPlayerEsp() ? "ON" : "OFF"; active = VisualFeatures.isPlayerEsp(); }
+                if (category == 7 && n == 1) { state = VisualFeatures.isHitboxEnabled() ? "ON" : "OFF"; active = VisualFeatures.isHitboxEnabled(); }
+                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:ACCENT,false);
+                if (category == 7 && n == 1) {
+                    String size = String.format(java.util.Locale.ROOT, "Size: %.2f  (- / +)", VisualFeatures.getHitboxExpansion());
+                    g.drawString(font,size,cx+10,cy+35,MUTED,false);
+                }
             }
         }
         g.drawString(font,"RIGHT SHIFT  /  ESC",x+16,y+ph-23,MUTED,false);
@@ -133,6 +142,17 @@ public final class ClickGuiScreen extends Screen {
         }else if(rightTab<0&&category==0){
             int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
             if(mx>=mainX&&mx<=mainX+cardW&&my>=y+74&&my<=y+122){VisualHud.setEnabled(!VisualHud.isEnabled());return true;}
+        }
+        if(rightTab<0&&category==7){
+            int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
+            int rows=Math.max(1,(ph-120)/58);
+            int cardY=y+74;
+            if(mx>=mainX&&mx<=mainX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setPlayerEsp(!VisualFeatures.isPlayerEsp());return true;}
+            int hitX=mainX+cardW+12;
+            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setHitboxEnabled(!VisualFeatures.isHitboxEnabled());return true;}
+            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY+28&&my<=cardY+48){
+                VisualFeatures.changeHitboxExpansion(mx<hitX+cardW/2?-0.05:0.05);return true;
+            }
         }
         return super.mouseClicked(e,dbl);
     }
