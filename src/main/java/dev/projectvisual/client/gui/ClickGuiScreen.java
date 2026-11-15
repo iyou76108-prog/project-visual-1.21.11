@@ -84,18 +84,15 @@ public final class ClickGuiScreen extends Screen {
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
-                boolean live=(category==0&&n==0)||(category==7);
+                boolean live=true;
                 boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
                 g.fill(cx,cy,cx+2,cy+48,live?ACCENT:0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
-                String state = "COMING SOON";
-                boolean active = false;
-                if (category == 0 && n == 0) { state = VisualHud.isEnabled() ? "ON" : "OFF"; active = VisualHud.isEnabled(); }
-                if (category == 7 && n == 0) { state = VisualFeatures.isPlayerEsp() ? "ON" : "OFF"; active = VisualFeatures.isPlayerEsp(); }
-                if (category == 7 && n == 1) { state = "IN DEVELOPMENT"; }
-                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:ACCENT,false);
+                String state = VisualFeatures.isEnabled(names[n]) ? "ON" : "OFF";
+                boolean active = VisualFeatures.isEnabled(names[n]);
+                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:MUTED,false);
             }
         }
         g.drawString(font,"RIGHT SHIFT  /  ESC",x+16,y+ph-23,MUTED,false);
@@ -136,16 +133,22 @@ public final class ClickGuiScreen extends Screen {
         if(rightTab==0){
             int mainX=x+left+16,mainW=pw-left-right-48;
             for(int i=0;i<3;i++){int bx=mainX+i*(mainW/3),by=y+78,bw=mainW/3-5;if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+30){language=i;return true;}}
-        }else if(rightTab<0&&category==0){
+        }else if(rightTab<0){
             int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
-            if(mx>=mainX&&mx<=mainX+cardW&&my>=y+74&&my<=y+122){VisualHud.setEnabled(!VisualHud.isEnabled());return true;}
-        }
-        if(rightTab<0&&category==7){
-            int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
+            String[] names=ITEMS[category];
             int rows=Math.max(1,(ph-120)/58);
-            int cardY=y+74;
-            if(mx>=mainX&&mx<=mainX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setPlayerEsp(!VisualFeatures.isPlayerEsp());return true;}
-            int hitX=mainX+cardW+12;
+            int start=Math.min(scroll,Math.max(0,names.length-rows*2));
+            for(int n=start;n<Math.min(names.length,start+rows*2);n++){
+                int col=(n-start)%2,row=(n-start)/2;
+                int cx=mainX+col*(cardW+12),cy=y+74+row*58;
+                if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
+                    String module=names[n];
+                    VisualFeatures.toggle(module);
+                    if(module.equals("FPS Counter")) VisualHud.setEnabled(VisualFeatures.isEnabled(module));
+                    if(module.equals("Player ESP")) VisualFeatures.setPlayerEsp(VisualFeatures.isEnabled(module));
+                    return true;
+                }
+            }
         }
         return super.mouseClicked(e,dbl);
     }
