@@ -64,7 +64,7 @@ public final class VisualFeatures {
     }
 
     public static void setHitboxExpansion(double value) {
-        hitboxExpansion = Math.max(0.05D, Math.min(0.75D, value));
+        hitboxExpansion = Math.max(0.05D, Math.min(2.0D, value));
     }
 
     public static boolean isPlayerEsp() {
