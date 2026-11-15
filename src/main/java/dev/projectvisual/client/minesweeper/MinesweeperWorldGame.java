@@ -363,7 +363,7 @@ public final class MinesweeperWorldGame {
         int[] colors = {0, 0xFF3576D5, 0xFF29944D, 0xFFD84B43, 0xFF7047B7,
                 0xFF9A512C, 0xFF259CA5, 0xFF343A44, 0xFF7E4B62};
         int color = colors[number];
-        double y0 = 0.145D, y1 = 0.17D, w = 0.030D;
+        double y0 = 0.145D, y1 = 0.17D;
         if (pattern.contains("a")) box(out,t,x-0.105D,y0,z-0.125D,x+0.105D,y1,z-0.095D,color);
         if (pattern.contains("g")) box(out,t,x-0.105D,y0,z-0.015D,x+0.105D,y1,z+0.015D,color);
         if (pattern.contains("d")) box(out,t,x-0.105D,y0,z+0.095D,x+0.105D,y1,z+0.125D,color);
@@ -444,7 +444,7 @@ public final class MinesweeperWorldGame {
                 double x01=x+radius*Math.sin(p0)*Math.cos(a1), z01=z+radius*Math.sin(p0)*Math.sin(a1), y01=y+radius*Math.cos(p0);
                 double x10=x+radius*Math.sin(p1)*Math.cos(a0), z10=z+radius*Math.sin(p1)*Math.sin(a0), y10=y+radius*Math.cos(p1);
                 double x11=x+radius*Math.sin(p1)*Math.cos(a1), z11=z+radius*Math.sin(p1)*Math.sin(a1), y11=y+radius*Math.cos(p1);
-                quad(out,t,x00,y00,z00,x10,y10,z10,x11,y11,z11,x01,y01,z01,color);
+                quad(out,t,color,x00,y00,z00,x10,y10,z10,x11,y11,z11,x01,y01,z01);
             }
         }
     }
