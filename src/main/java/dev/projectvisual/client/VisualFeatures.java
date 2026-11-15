@@ -6,7 +6,7 @@ import java.util.Map;
 public final class VisualFeatures {
     private static final Map<String, Boolean> STATES = new LinkedHashMap<>();
     private static int customAccentColor = 0xFF54D6C8;
-    private static double hitboxExpansion = 0.18D;
+    private static double hitboxExpansion = 0.5D;
 
     static {
         String[] modules = {
