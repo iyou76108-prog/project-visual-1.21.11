@@ -9,8 +9,10 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.phys.shapes.Shapes;
@@ -30,6 +32,7 @@ public final class VisualWorldEffects {
     private static final int MAX_TRAIL_POINTS = 18;
     private static final int MAX_BREADCRUMBS = 42;
     private static final Map<UUID, Deque<Vec3>> PLAYER_TRAILS = new HashMap<>();
+    private static final Map<UUID, Float> LAST_PLAYER_HEALTH = new HashMap<>();
     private static final Deque<Vec3> BREADCRUMBS = new ArrayDeque<>();
 
     private static KeyMapping zoomKey;
@@ -76,6 +79,8 @@ public final class VisualWorldEffects {
         }
         previousHurtTime = client.player.hurtTime;
 
+        updateHitParticles(client);
+
         tickCounter++;
         if ((tickCounter & 1) != 0) return;
 
@@ -109,6 +114,37 @@ public final class VisualWorldEffects {
         }
     }
 
+    private static void updateHitParticles(Minecraft client) {
+        if (!VisualFeatures.isEnabled("Hit Particles")) {
+            LAST_PLAYER_HEALTH.clear();
+            return;
+        }
+
+        Set<UUID> visiblePlayers = new HashSet<>();
+        for (Player target : client.level.players()) {
+            if (target == client.player || !target.isAlive()
+                    || client.player.distanceToSqr(target) > 48.0D * 48.0D) continue;
+
+            UUID id = target.getUUID();
+            visiblePlayers.add(id);
+            float health = target.getHealth();
+            Float previous = LAST_PLAYER_HEALTH.put(id, health);
+            if (previous == null || health >= previous - 0.05F) continue;
+
+            int count = Math.min(6, Math.max(1, Math.round(previous - health)));
+            for (int i = 0; i < count; i++) {
+                double offsetX = (Math.random() - 0.5D) * target.getBbWidth();
+                double offsetZ = (Math.random() - 0.5D) * target.getBbWidth();
+                double velocityX = (Math.random() - 0.5D) * 0.12D;
+                double velocityZ = (Math.random() - 0.5D) * 0.12D;
+                client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR,
+                        target.getX() + offsetX, target.getY() + target.getBbHeight() * 0.62D,
+                        target.getZ() + offsetZ, velocityX, 0.10D, velocityZ);
+            }
+        }
+        LAST_PLAYER_HEALTH.keySet().removeIf(id -> !visiblePlayers.contains(id));
+    }
+
     private static void restoreSmoothCamera(Minecraft client) {
         if (smoothCameraApplied) {
             client.options.smoothCamera = previousSmoothCamera;
@@ -123,7 +159,9 @@ public final class VisualWorldEffects {
         boolean drawHitboxes = VisualFeatures.isEnabled("Hitbox Visual");
         boolean drawTrails = VisualFeatures.isEnabled("Player Trails");
         boolean drawBreadcrumbs = VisualFeatures.isEnabled("Breadcrumbs");
-        if (!drawHitboxes && !drawTrails && !drawBreadcrumbs) return;
+        boolean drawHat = VisualFeatures.isEnabled("China Hat");
+        boolean drawBlockOverlay = VisualFeatures.isEnabled("Block Overlay");
+        if (!drawHitboxes && !drawTrails && !drawBreadcrumbs && !drawHat && !drawBlockOverlay) return;
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
         VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
@@ -135,6 +173,17 @@ public final class VisualWorldEffects {
                 int color = VisualFeatures.accentColor();
                 drawBox(context, lines, player.getBoundingBox(), camera, color, 1.7F);
             }
+        }
+
+        if (drawBlockOverlay && client.hitResult instanceof BlockHitResult blockHit) {
+            var pos = blockHit.getBlockPos();
+            AABB selectedBlock = new AABB(pos.getX(), pos.getY(), pos.getZ(),
+                    pos.getX() + 1.0D, pos.getY() + 1.0D, pos.getZ() + 1.0D);
+            drawBox(context, lines, selectedBlock, camera, VisualFeatures.accentColor(), 2.0F);
+        }
+
+        if (drawHat) {
+            renderChinaHat(context, lines, client.player, camera);
         }
 
         if (drawTrails) {
@@ -161,6 +210,28 @@ public final class VisualWorldEffects {
                 drawMarker(context, lines, point, camera, color, 0.075D);
             }
         }
+    }
+
+    private static void renderChinaHat(WorldRenderContext context, VertexConsumer lines,
+                                       Player player, Vec3 camera) {
+        Vec3 base = player.position();
+        double brimY = player.getY() + player.getBbHeight() - 0.02D;
+        int color = VisualFeatures.accentColor();
+
+        for (int i = 0; i < 16; i++) {
+            double angle = (Math.PI * 2.0D * i) / 16.0D;
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.48D, brimY,
+                    base.z + Math.sin(angle) * 0.48D);
+            drawMarker(context, lines, point, camera, color, 0.035D);
+        }
+        for (int i = 0; i < 12; i++) {
+            double angle = (Math.PI * 2.0D * i) / 12.0D;
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.23D, brimY + 0.22D,
+                    base.z + Math.sin(angle) * 0.23D);
+            drawMarker(context, lines, point, camera, color, 0.03D);
+        }
+        drawMarker(context, lines, new Vec3(base.x, brimY + 0.43D, base.z),
+                camera, color, 0.04D);
     }
 
     private static void drawBox(WorldRenderContext context, VertexConsumer lines, AABB worldBox,

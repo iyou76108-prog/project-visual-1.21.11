@@ -21,8 +21,6 @@ public final class VisualHud {
     private static final Deque<Long> leftClicks = new ArrayDeque<>();
     private static final Deque<Long> rightClicks = new ArrayDeque<>();
     private static final Deque<Notification> notifications = new ArrayDeque<>();
-    private static boolean lastLeft;
-    private static boolean lastRight;
     private static long damageFlashUntil;
 
     private record Notification(String text, long expiresAt) {}
@@ -53,14 +51,10 @@ public final class VisualHud {
                 Identifier.fromNamespaceAndPath(ProjectVisualClient.MOD_ID, "visual_hud"), VisualHud::render);
     }
 
-    private static void sampleClicks(Minecraft mc) {
-        boolean left = mc.options.keyAttack.isDown();
-        boolean right = mc.options.keyUse.isDown();
+    public static void recordMouseClick(int button) {
         long now = System.currentTimeMillis();
-        if (left && !lastLeft) leftClicks.addLast(now);
-        if (right && !lastRight) rightClicks.addLast(now);
-        lastLeft = left;
-        lastRight = right;
+        if (button == 0) leftClicks.addLast(now);
+        if (button == 1) rightClicks.addLast(now);
         while (!leftClicks.isEmpty() && now - leftClicks.peekFirst() > 1000L) leftClicks.removeFirst();
         while (!rightClicks.isEmpty() && now - rightClicks.peekFirst() > 1000L) rightClicks.removeFirst();
     }
@@ -89,7 +83,6 @@ public final class VisualHud {
             g.fill(0, 0, screenWidth, screenHeight, 0x0B9B7BFF);
         }
 
-        sampleClicks(mc);
         int x = 10;
         int y = 10;
 
