@@ -5,6 +5,8 @@ import java.util.Map;
 
 public final class VisualFeatures {
     private static final Map<String, Boolean> STATES = new LinkedHashMap<>();
+    private static int customAccentColor = 0xFF54D6C8;
+    private static double hitboxExpansion = 0.18D;
 
     static {
         String[] modules = {
@@ -15,7 +17,7 @@ public final class VisualFeatures {
             "Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation",
             "View Model","Camera Clip","Zoom","Smooth Camera","Perspective",
             "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual",
-            "Queen Skin","Magnus AFK"
+            "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Hitboxes","Chest ESP"
         };
         for (String module : modules) STATES.put(module, false);
         STATES.put("FPS Counter", true);
@@ -42,7 +44,24 @@ public final class VisualFeatures {
     }
 
     public static int accentColor() {
-        return isEnabled("Color Theme") ? 0xFF54D6C8 : 0xFF9B7BFF;
+        return isEnabled("Color Theme") ? customAccentColor : 0xFF9B7BFF;
+    }
+
+    public static int customAccentColor() {
+        return customAccentColor;
+    }
+
+    public static void setCustomAccentColor(int color) {
+        customAccentColor = 0xFF000000 | (color & 0x00FFFFFF);
+        setEnabled("Color Theme", true);
+    }
+
+    public static double hitboxExpansion() {
+        return hitboxExpansion;
+    }
+
+    public static void setHitboxExpansion(double value) {
+        hitboxExpansion = Math.max(0.05D, Math.min(0.75D, value));
     }
 
     public static boolean isPlayerEsp() {
