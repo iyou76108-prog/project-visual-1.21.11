@@ -4,6 +4,7 @@ import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.Minecraft;
 import net.minecraft.network.chat.Component;
 import net.minecraft.client.input.MouseButtonEvent;
 
@@ -113,7 +114,13 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,tr("More settings will be added later.","Другие настройки появятся позже.","Басқа баптаулар кейін қосылады."),x,y+148,MUTED,false);
         }else if(rightTab==1){
             g.drawString(font,tr("Minigames","Мини-игры","Мини-ойындар"),x,y+19,TEXT,false);
-            g.drawString(font,tr("Coming in a future update.","Появятся в будущем обновлении.","Келесі жаңартуда қосылады."),x,y+54,MUTED,false);
+            int by=y+48;
+            g.fill(x,by,x+w,by+76,CARD);
+            g.fill(x,by,x+3,by+76,VisualFeatures.accentColor());
+            g.drawString(font,"Chess",x+12,by+10,TEXT,false);
+            g.drawString(font,tr("Play against a medium AI","Играть против ИИ среднего уровня","Орташа деңгейдегі ЖИ-мен ойнау"),x+12,by+28,MUTED,false);
+            g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+51,VisualFeatures.accentColor(),false);
+            g.drawString(font,tr("Online friends matchmaking is being prepared.","Глобальные приглашения друзей готовятся.","Достармен онлайн ойнау дайындалуда."),x,y+143,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
             g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
@@ -132,6 +139,12 @@ public final class ClickGuiScreen extends Screen {
         if(rightTab==0){
             int mainX=x+left+16,mainW=pw-left-right-48;
             for(int i=0;i<3;i++){int bx=mainX+i*(mainW/3),by=y+78,bw=mainW/3-5;if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+30){language=i;return true;}}
+        }else if(rightTab==1){
+            int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
+                Minecraft.getInstance().setScreen(new ChessScreen());
+                return true;
+            }
         }else if(rightTab<0){
             int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
             String[] names=ITEMS[category];
