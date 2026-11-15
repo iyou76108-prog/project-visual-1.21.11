@@ -14,8 +14,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - name: Install global service dependencies
+        run: npm install --prefix server --no-audit --no-fund
       - name: Check global service syntax
         run: node --check server/src/server.js
+      - name: Test global service accounts and chess matches
+        run: npm test --prefix server
 
   build:
     runs-on: ubuntu-latest

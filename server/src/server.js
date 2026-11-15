@@ -264,8 +264,13 @@ async function handleApi(req, res, url) {
   if (req.method === "POST" && url.pathname === "/api/login") {
     const body = await readJson(req);
     const user = findUserByName(body.username);
-    if (!user || typeof body.password !== "string"
-        || hashPassword(body.password, user.salt) !== user.passwordHash) {
+    if (!user || typeof body.password !== "string") {
+      return reply(res, 401, { error: "Incorrect username or password." });
+    }
+    const candidateHash = Buffer.from(hashPassword(body.password, user.salt), "hex");
+    const storedHash = Buffer.from(user.passwordHash, "hex");
+    if (candidateHash.length !== storedHash.length
+        || !timingSafeEqual(candidateHash, storedHash)) {
       return reply(res, 401, { error: "Incorrect username or password." });
     }
     return reply(res, 200, { user: publicUser(user), token: issueToken(user.id) });

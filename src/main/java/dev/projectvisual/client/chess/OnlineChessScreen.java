@@ -30,6 +30,7 @@ public final class OnlineChessScreen extends Screen {
     private java.util.List<ChessMove> selectedMoves = java.util.List.of();
     private boolean waitingForServer;
     private boolean resigned;
+    private boolean gameOver;
     private String message = "Connected to PROJECT VISUAL global chess.";
 
     public OnlineChessScreen(String matchId, String color, String initialFen, String opponentName) {
@@ -49,11 +50,19 @@ public final class OnlineChessScreen extends Screen {
                 try {
                     game = ChessGame.fromFen(event.get("fen").getAsString());
                     waitingForServer = false;
+                    gameOver = event.has("gameOver") && event.get("gameOver").getAsBoolean();
                     selected = -1;
                     selectedMoves = java.util.List.of();
-                    message = event.has("gameOver") && event.get("gameOver").getAsBoolean()
-                            ? "Game finished: " + game.statusText()
-                            : game.isInCheck() ? "Check!" : "Position synchronized.";
+                    if (gameOver) {
+                        boolean draw = event.has("draw") && event.get("draw").getAsBoolean();
+                        boolean mate = event.has("checkmate") && event.get("checkmate").getAsBoolean();
+                        message = draw ? "Draw." : mate
+                                ? (game.isWhiteToMove() ? "Black wins by checkmate." : "White wins by checkmate.")
+                                : "Game finished.";
+                    } else {
+                        message = event.has("check") && event.get("check").getAsBoolean()
+                                ? "Check!" : "Position synchronized.";
+                    }
                 } catch (RuntimeException error) {
                     message = "Received an invalid board position.";
                 }
@@ -147,7 +156,7 @@ public final class OnlineChessScreen extends Screen {
     @Override
     public boolean mouseClicked(MouseButtonEvent event, boolean doubleClick) {
         if (event.button() != 0) return super.mouseClicked(event, doubleClick);
-        if (waitingForServer || resigned || game.statusText().contains("wins")
+        if (waitingForServer || resigned || gameOver || game.statusText().contains("wins")
                 || game.statusText().startsWith("Draw")) return true;
 
         int tile = Math.max(28, Math.min(62, Math.min((height - 100) / 8, (width - 250) / 8)));
