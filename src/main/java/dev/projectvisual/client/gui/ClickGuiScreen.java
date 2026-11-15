@@ -3,6 +3,7 @@ package dev.projectvisual.client.gui;
 import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
+import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -160,7 +161,12 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,"Chess",x+12,by+10,TEXT,false);
             g.drawString(font,tr("3D board in the world  /  Medium AI","3D-доска в мире  /  Средний ИИ","3D тақта  /  Орташа ЖИ"),x+12,by+28,MUTED,false);
             g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+51,VisualFeatures.accentColor(),false);
-            g.drawString(font,tr("Summon portal  •  Right-click pieces and squares","Портал призывает доску  •  ПКМ: фигура и клетка","Портал шақырады  •  Оң жақ батырма: фигура мен ұяшық"),x,y+143,MUTED,false);
+            g.fill(x,by+88,x+w,by+164,CARD);
+            g.fill(x,by+88,x+3,by+164,VisualFeatures.accentColor());
+            g.drawString(font,"Minesweeper",x+12,by+98,TEXT,false);
+            g.drawString(font,tr("3D board  /  10 mines  /  Safe first click","3D-доска  /  10 мин  /  Первый ход безопасен","3D тақта  /  10 мина  /  Бірінші жүріс қауіпсіз"),x+12,by+116,MUTED,false);
+            g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+139,VisualFeatures.accentColor(),false);
+            g.drawString(font,tr("Chess: right-click to select and move. Minesweeper: right-click reveal, Shift+right-click flag.","Шахматы: ПКМ выбрать и сходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг.","Шахмат: оң жақпен таңдау. Сапер: ашу — оң жақ, жалау — Shift+оң жақ."),x,y+233,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
             g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
@@ -192,6 +198,11 @@ public final class ClickGuiScreen extends Screen {
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
                 ChessWorldGame.start();
+                Minecraft.getInstance().setScreen(null);
+                return true;
+            }
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=by+88&&my<=by+164){
+                MinesweeperWorldGame.start();
                 Minecraft.getInstance().setScreen(null);
                 return true;
             }
