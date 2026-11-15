@@ -12,6 +12,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -21,25 +22,22 @@ import org.lwjgl.glfw.GLFW;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class VisualWorldEffects {
     private static final int MAX_TRAIL_POINTS = 18;
     private static final int MAX_BREADCRUMBS = 42;
     private static final Map<UUID, Deque<Vec3>> PLAYER_TRAILS = new HashMap<>();
-    private static final Map<UUID, Float> LAST_PLAYER_HEALTH = new HashMap<>();
     private static final Deque<Vec3> BREADCRUMBS = new ArrayDeque<>();
 
     private static KeyMapping zoomKey;
     private static boolean smoothCameraApplied;
     private static boolean previousSmoothCamera;
     private static int tickCounter;
-    private static int previousHurtTime;
 
     private VisualWorldEffects() {}
 
@@ -60,7 +58,6 @@ public final class VisualWorldEffects {
     private static void tick(Minecraft client) {
         if (client.player == null || client.level == null) {
             restoreSmoothCamera(client);
-            previousHurtTime = 0;
             return;
         }
 
@@ -72,14 +69,6 @@ public final class VisualWorldEffects {
         } else if (!smoothEnabled) {
             restoreSmoothCamera(client);
         }
-
-        if (client.player.hurtTime > 0 && previousHurtTime == 0
-                && VisualFeatures.isEnabled("Damage Tint")) {
-            dev.projectvisual.client.hud.VisualHud.triggerDamageFlash();
-        }
-        previousHurtTime = client.player.hurtTime;
-
-        updateHitParticles(client);
 
         tickCounter++;
         if ((tickCounter & 1) != 0) return;
@@ -114,35 +103,25 @@ public final class VisualWorldEffects {
         }
     }
 
-    private static void updateHitParticles(Minecraft client) {
-        if (!VisualFeatures.isEnabled("Hit Particles")) {
-            LAST_PLAYER_HEALTH.clear();
-            return;
-        }
+    public static void spawnHitParticles(LivingEntity target) {
+        Minecraft client = Minecraft.getInstance();
+        if (!VisualFeatures.isEnabled("Hit Particles") || client.level == null
+                || target.level() != client.level || !target.isAlive()) return;
 
-        Set<UUID> visiblePlayers = new HashSet<>();
-        for (Player target : client.level.players()) {
-            if (target == client.player || !target.isAlive()
-                    || client.player.distanceToSqr(target) > 48.0D * 48.0D) continue;
-
-            UUID id = target.getUUID();
-            visiblePlayers.add(id);
-            float health = target.getHealth();
-            Float previous = LAST_PLAYER_HEALTH.put(id, health);
-            if (previous == null || health >= previous - 0.05F) continue;
-
-            int count = Math.min(6, Math.max(1, Math.round(previous - health)));
-            for (int i = 0; i < count; i++) {
-                double offsetX = (Math.random() - 0.5D) * target.getBbWidth();
-                double offsetZ = (Math.random() - 0.5D) * target.getBbWidth();
-                double velocityX = (Math.random() - 0.5D) * 0.12D;
-                double velocityZ = (Math.random() - 0.5D) * 0.12D;
-                client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR,
-                        target.getX() + offsetX, target.getY() + target.getBbHeight() * 0.62D,
-                        target.getZ() + offsetZ, velocityX, 0.10D, velocityZ);
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+        double centerY = target.getY() + target.getBbHeight() * 0.58D;
+        for (int i = 0; i < 7; i++) {
+            double x = target.getX() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
+            double y = centerY + random.nextDouble(-0.12D, 0.28D) * target.getBbHeight();
+            double z = target.getZ() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
+            double vx = random.nextDouble(-0.11D, 0.11D);
+            double vy = random.nextDouble(0.04D, 0.16D);
+            double vz = random.nextDouble(-0.11D, 0.11D);
+            client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
+            if ((i & 1) == 0) {
+                client.level.addParticle(ParticleTypes.CRIT, x, y, z, vx * 1.35D, vy, vz * 1.35D);
             }
         }
-        LAST_PLAYER_HEALTH.keySet().removeIf(id -> !visiblePlayers.contains(id));
     }
 
     private static void restoreSmoothCamera(Minecraft client) {
