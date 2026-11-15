@@ -48,7 +48,12 @@ public final class VisualHud {
         }
         if(VisualFeatures.isEnabled("Armor HUD")){
             StringBuilder armor=new StringBuilder("ARMOR  ");
-            for(ItemStack stack:mc.player.getArmorSlots()) armor.append(stack.isEmpty()?"-":stack.getMaxDamage()-stack.getDamageValue()).append("  ");
+            for(net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{
+                net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
+                net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
+                ItemStack stack=mc.player.getItemBySlot(slot);
+                armor.append(stack.isEmpty()?"-":stack.getMaxDamage()-stack.getDamageValue()).append("  ");
+            }
             line(g,mc,armor.toString(),x,yy); yy+=17;
         }
         if(VisualFeatures.isEnabled("Potion HUD")){
