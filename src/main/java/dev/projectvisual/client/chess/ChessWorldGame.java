@@ -1,5 +1,6 @@
 package dev.projectvisual.client.chess;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.projectvisual.client.ProjectVisualClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -8,11 +9,11 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.ShapeRenderer;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.RenderPipelines;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 
@@ -43,6 +44,23 @@ public final class ChessWorldGame {
     private static final int CYAN = 0xFF63D9E8;
     private static final int SELECTED = 0xFF76E5D5;
     private static final int TARGET = 0xFF82CFA6;
+
+    // DEBUG_QUADS is translucent and deliberately does not write to depth.
+    // That is suitable for debug overlays, but it causes the rear faces of
+    // closed 3D meshes to blend over their front faces. Use an opaque,
+    // depth-writing pipeline for the chess board and pieces instead.
+    private static final RenderPipeline CHESS_SOLID_PIPELINE =
+            RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+                    .withLocation(Identifier.fromNamespaceAndPath(
+                            ProjectVisualClient.MOD_ID, "pipeline/chess_solid"))
+                    .withoutBlend()
+                    .withDepthWrite(true)
+                    .withCull(false)
+                    .build();
+
+    private static final RenderType CHESS_SOLID_RENDER_TYPE = RenderType.create(
+            "project_visual_chess_solid",
+            RenderSetup.builder(CHESS_SOLID_PIPELINE).build());
 
     private static final ChessEngine GAME = new ChessEngine();
 
@@ -375,7 +393,7 @@ public final class ChessWorldGame {
 
         // MultiBufferSource buffers are only valid until getBuffer() is called
         // for another render type. Finish all quads before switching to lines.
-        VertexConsumer quads = context.consumers().getBuffer(RenderTypes.debugQuads());
+        VertexConsumer quads = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
         renderBoard(quads, transform);
         renderPieces(quads, transform, camera);
 
@@ -666,9 +684,10 @@ public final class ChessWorldGame {
     }
 
     private static void emitVertex(VertexConsumer out, Vec3 point, int color, Vec3 normal) {
+        // The chess solid pipeline uses POSITION_COLOR (unlit geometry),
+        // so no normal attribute is part of this vertex format.
         out.addVertex((float) point.x, (float) point.y, (float) point.z)
-                .setColor(color)
-                .setNormal((float) normal.x, (float) normal.y, (float) normal.z);
+                .setColor(color);
     }
 
     private static void emitLine(VertexConsumer out, Vec3 a, Vec3 b,
