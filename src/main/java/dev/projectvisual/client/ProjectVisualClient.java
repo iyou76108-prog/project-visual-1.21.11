@@ -2,6 +2,7 @@ package dev.projectvisual.client;
 
 import dev.projectvisual.client.gui.ClickGuiScreen;
 import dev.projectvisual.client.hud.VisualHud;
+import dev.projectvisual.client.VisualWorldEffects;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
@@ -21,6 +22,7 @@ public final class ProjectVisualClient implements ClientModInitializer {
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.project_visual.open_gui", GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
         VisualHud.register();
+        VisualWorldEffects.register();
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openGuiKey.consumeClick()) {
                 if (client.screen == null) client.setScreen(new ClickGuiScreen());

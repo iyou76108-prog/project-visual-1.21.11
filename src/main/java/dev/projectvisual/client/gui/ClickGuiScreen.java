@@ -9,7 +9,7 @@ import net.minecraft.client.input.MouseButtonEvent;
 
 public final class ClickGuiScreen extends Screen {
     private static final int BG=0xF00D0F18, SIDE=0xF0161925, CARD=0xFF1D2130, HOVER=0xFF282D40;
-    private static final int ACCENT=0xFF9B7BFF, TEXT=0xFFF3F0FF, MUTED=0xFFAAA6BA;
+    private static final int TEXT=0xFFF3F0FF, MUTED=0xFFAAA6BA;
     private static final String[] CATS={"HUD","Combat","Player","World","Animations","Camera","Interface","Cheat","Skins"};
     private static final String[] RIGHT={"Settings","Minigames","Friends"};
     private static final String[][] ITEMS={
@@ -50,28 +50,28 @@ public final class ClickGuiScreen extends Screen {
         int pw=Math.min(1000,width-24), ph=Math.min(540,height-24);
         int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154;
         int mainX=x+left+16, mainW=pw-left-right-48, rightX=x+pw-right;
-        g.fill(x,y,x+pw,y+ph,BG); g.fill(x,y,x+pw,y+3,ACCENT);
+        g.fill(x,y,x+pw,y+ph,BG); g.fill(x,y,x+pw,y+3,VisualFeatures.accentColor());
         g.fill(x,y,x+left,y+ph,SIDE); g.fill(rightX,y,rightX+right,y+ph,SIDE);
         g.fill(x+left,y+55,x+left+1,y+ph-18,0x553F3B50);
         g.fill(rightX,y+55,rightX+1,y+ph-18,0x553F3B50);
         g.drawString(font,"PROJECT VISUAL",x+16,y+16,TEXT,false);
         g.drawString(font,"CLIENT  /  0.3",x+16,y+33,MUTED,false);
-        g.drawString(font,tr("MODULES","МОДУЛИ","МОДУЛЬДЕР"),x+16,y+65,ACCENT,false);
+        g.drawString(font,tr("MODULES","МОДУЛИ","МОДУЛЬДЕР"),x+16,y+65,VisualFeatures.accentColor(),false);
         String[] cats=categories();
         for(int i=0;i<cats.length;i++){
             int cy=y+86+i*34; boolean a=i==category;
             if(a||(mx>=x+9&&mx<=x+left-9&&my>=cy-5&&my<=cy+22))
                 g.fill(x+9,cy-5,x+left-9,cy+22,a?0x553F3568:HOVER);
-            if(a)g.fill(x+9,cy-5,x+11,cy+22,ACCENT);
+            if(a)g.fill(x+9,cy-5,x+11,cy+22,VisualFeatures.accentColor());
             g.drawString(font,cats[i],x+20,cy+3,a?TEXT:MUTED,false);
         }
-        g.drawString(font,tr("WORKSPACE","РАБОЧАЯ ОБЛАСТЬ","ЖҰМЫС АЙМАҒЫ"),rightX+15,y+65,ACCENT,false);
+        g.drawString(font,tr("WORKSPACE","РАБОЧАЯ ОБЛАСТЬ","ЖҰМЫС АЙМАҒЫ"),rightX+15,y+65,VisualFeatures.accentColor(),false);
         String[] tabs=rightTabs();
         for(int i=0;i<tabs.length;i++){
             int cy=y+86+i*38; boolean a=i==rightTab;
             if(a||(mx>=rightX+8&&mx<=rightX+right-8&&my>=cy-5&&my<=cy+23))
                 g.fill(rightX+8,cy-5,rightX+right-8,cy+23,a?0x553F3568:HOVER);
-            if(a)g.fill(rightX+8,cy-5,rightX+10,cy+23,ACCENT);
+            if(a)g.fill(rightX+8,cy-5,rightX+10,cy+23,VisualFeatures.accentColor());
             g.drawString(font,tabs[i],rightX+19,cy+4,a?TEXT:MUTED,false);
         }
         if(rightTab>=0){
@@ -84,10 +84,10 @@ public final class ClickGuiScreen extends Screen {
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
-                boolean live=true;
-                boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
+                                boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
-                g.fill(cx,cy,cx+2,cy+48,live?ACCENT:0xFF45495A);
+                boolean active = VisualFeatures.isEnabled(names[n]);
+                g.fill(cx,cy,cx+2,cy+48,active?VisualFeatures.accentColor():0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
                 String state = VisualFeatures.isEnabled(names[n]) ? "ON" : "OFF";
@@ -96,7 +96,7 @@ public final class ClickGuiScreen extends Screen {
             }
         }
         g.drawString(font,"RIGHT SHIFT  /  ESC",x+16,y+ph-23,MUTED,false);
-        g.drawString(font,"PROJECT VISUAL  •  1.21.11",rightX+12,y+ph-23,ACCENT,false);
+        g.drawString(font,"PROJECT VISUAL  •  1.21.11",rightX+12,y+ph-23,VisualFeatures.accentColor(),false);
         super.render(g,mx,my,tick);
     }
 
@@ -144,6 +144,7 @@ public final class ClickGuiScreen extends Screen {
                 if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
                     String module=names[n];
                     VisualFeatures.toggle(module);
+                    VisualHud.notifyToggle(module, VisualFeatures.isEnabled(module));
                     if(module.equals("FPS Counter")) VisualHud.setEnabled(VisualFeatures.isEnabled(module));
                     if(module.equals("Player ESP")) VisualFeatures.setPlayerEsp(VisualFeatures.isEnabled(module));
                     return true;

@@ -3,6 +3,11 @@
   "minVersion": "0.8",
   "package": "dev.projectvisual.mixin",
   "compatibilityLevel": "JAVA_21",
-  "client": ["EntityHitboxMixin"],
+  "client": [
+    "EntityHitboxMixin",
+    "FullbrightMixin",
+    "ClientWorldVisualMixin",
+    "ZoomMixin"
+  ],
   "injectors": { "defaultRequire": 1 }
 }
