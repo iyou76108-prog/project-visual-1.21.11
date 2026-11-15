@@ -123,9 +123,10 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,tr("Online multiplayer is being connected to the global service.","Онлайн-режим подключается к глобальному сервису.","Онлайн режим жаһандық сервиске қосылады."),x,y+140,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
-            g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
-            g.drawString(font,tr("Online discovery needs a shared","Для поиска онлайн нужен общий","Онлайн іздеу үшін ортақ сервер"),x,y+76,MUTED,false);
-            g.drawString(font,tr("presence server; not connected yet.","сервер присутствия; пока не подключён.","қажет; әзірге қосылмаған."),x,y+90,MUTED,false);
+            g.drawString(font,tr("Global account, friends and online chess.","Аккаунт, друзья и онлайн-шахматы.","Аккаунт, достар және онлайн шахмат."),x,y+54,MUTED,false);
+            g.fill(x,y+75,x+w,y+127,CARD);
+            g.drawString(font,tr("OPEN FRIENDS","ОТКРЫТЬ ДРУЗЕЙ","ДОСТАРДЫ АШУ"),x+12,y+91,VisualFeatures.accentColor(),false);
+            g.drawString(font,tr("Set the global service address in the next screen.","Укажи адрес глобального сервиса на следующем экране.","Келесі экранда жаһандық сервис мекенжайын орнат."),x,y+146,MUTED,false);
         }
     }
 
@@ -143,6 +144,12 @@ public final class ClickGuiScreen extends Screen {
             int mainX=x+left+16,mainW=pw-left-right-48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=y+45&&my<=y+119){
                 Minecraft.getInstance().setScreen(new ChessScreen());
+                return true;
+            }
+        }else if(rightTab==2){
+            int mainX=x+left+16,mainW=pw-left-right-48;
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=y+75&&my<=y+127){
+                Minecraft.getInstance().setScreen(new FriendsScreen());
                 return true;
             }
         }else if(rightTab<0){
