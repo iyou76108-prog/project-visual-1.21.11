@@ -27,7 +27,7 @@ public final class FriendsScreen extends Screen {
     private EditBox endpointField;
     private EditBox usernameField;
     private EditBox passwordField;
-    private EditBox friendField;
+    private EditBox addFriendField;
 
     private String status = "Connect to the global service. Use a unique PV password, not your Microsoft password.";
     private List<JsonObject> friends = new ArrayList<>();
@@ -249,7 +249,9 @@ public final class FriendsScreen extends Screen {
                     }
                     friends = objects(friendsFuture.join().getAsJsonArray("friends"));
                     incomingRequests = objects(requestsFuture.join().getAsJsonArray("incoming"));
-                    incomingInvites = objects(invitesFuture.join().getAsJsonArray("invites"));
+                    incomingInvites = objects(invitesFuture.join().getAsJsonArray("invites"))
+                            .stream().filter(item -> item.has("direction")
+                                    && "incoming".equals(item.get("direction").getAsString())).toList();
                     status = "Global service connected.";
                 }));
     }
