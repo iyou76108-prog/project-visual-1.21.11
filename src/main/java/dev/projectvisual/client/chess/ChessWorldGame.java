@@ -671,11 +671,10 @@ public final class ChessWorldGame {
 
     private static void emitLine(VertexConsumer out, Vec3 a, Vec3 b,
                                  Vec3 camera, int color, float width) {
-        out.setLineWidth(width);
         out.addVertex((float) a.x, (float) a.y, (float) a.z)
-                .setColor(color).setNormal(0.0F, 1.0F, 0.0F);
+                .setColor(color).setNormal(0.0F, 1.0F, 0.0F).setLineWidth(width);
         out.addVertex((float) b.x, (float) b.y, (float) b.z)
-                .setColor(color).setNormal(0.0F, 1.0F, 0.0F);
+                .setColor(color).setNormal(0.0F, 1.0F, 0.0F).setLineWidth(width);
     }
 
     private static final class BoardTransform {
