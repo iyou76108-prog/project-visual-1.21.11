@@ -1,6 +1,8 @@
 package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
+import dev.projectvisual.client.chess.ChessScreen;
+import net.minecraft.client.Minecraft;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -113,12 +115,21 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,tr("More settings will be added later.","Другие настройки появятся позже.","Басқа баптаулар кейін қосылады."),x,y+148,MUTED,false);
         }else if(rightTab==1){
             g.drawString(font,tr("Minigames","Мини-игры","Мини-ойындар"),x,y+19,TEXT,false);
-            g.drawString(font,tr("Coming in a future update.","Появятся в будущем обновлении.","Келесі жаңартуда қосылады."),x,y+54,MUTED,false);
+            int by=y+48;
+            g.fill(x,by,x+Math.min(w,260),by+48,CARD);
+            g.fill(x,by,x+3,by+48,VisualFeatures.accentColor());
+            g.drawString(font,"Chess  /  vs AI",x+12,by+8,TEXT,false);
+            g.drawString(font,tr("Full rules · medium AI","Полные правила · средний ИИ","Толық ереже · орташа ЖИ"),x+12,by+26,MUTED,false);
+            g.drawString(font,tr("Click to start a game","Нажми, чтобы начать партию","Ойынды бастау үшін бас"),x,by+62,MUTED,false);
+            g.drawString(font,tr("Online chess","Сетевые шахматы","Онлайн шахмат"),x,by+100,TEXT,false);
+            g.drawString(font,tr("Global play needs the PROJECT VISUAL","Для глобальной игры нужен сервер","Глобалды ойын үшін PROJECT VISUAL"),x,by+122,MUTED,false);
+            g.drawString(font,tr("service to be deployed.","сервиса; его ещё нужно развернуть.","қызметін іске қосу қажет."),x,by+136,MUTED,false);
         }else{
-            g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
-            g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
-            g.drawString(font,tr("Online discovery needs a shared","Для поиска онлайн нужен общий","Онлайн іздеу үшін ортақ сервер"),x,y+76,MUTED,false);
-            g.drawString(font,tr("presence server; not connected yet.","сервер присутствия; пока не подключён.","қажет; әзірге қосылмаған."),x,y+90,MUTED,false);
+            g.drawString(font,tr("Global friends","Глобальные друзья","Ғаламдық достар"),x,y+19,TEXT,false);
+            g.drawString(font,tr("Add friends and invite them from any","Добавление друзей и приглашения","Достарды қосу және серверге тәуелсіз"),x,y+54,MUTED,false);
+            g.drawString(font,tr("Minecraft server.","на любых Minecraft-серверах.","шақырулар."),x,y+68,MUTED,false);
+            g.drawString(font,tr("Service backend is being prepared;","Сетевой сервер PROJECT VISUAL ещё","PROJECT VISUAL желілік сервері әлі"),x,y+104,MUTED,false);
+            g.drawString(font,tr("online status is not active yet.","не развёрнут — онлайн пока не работает.","іске қосылмаған — онлайн жоқ."),x,y+118,MUTED,false);
         }
     }
 
@@ -129,7 +140,13 @@ public final class ClickGuiScreen extends Screen {
         String[] cats=categories(),tabs=rightTabs();
         for(int i=0;i<cats.length;i++){int cy=y+86+i*34;if(mx>=x+9&&mx<=x+left-9&&my>=cy-5&&my<=cy+22){category=i;rightTab=-1;scroll=0;return true;}}
         for(int i=0;i<tabs.length;i++){int cy=y+86+i*38;if(mx>=rightX+8&&mx<=rightX+right-8&&my>=cy-5&&my<=cy+23){rightTab=i;return true;}}
-        if(rightTab==0){
+        if(rightTab==1){
+            int mainX=x+left+16, by=y+48;
+            if(mx>=mainX&&mx<=mainX+260&&my>=by&&my<=by+48){
+                Minecraft.getInstance().setScreen(new ChessScreen());
+                return true;
+            }
+        }else if(rightTab==0){
             int mainX=x+left+16,mainW=pw-left-right-48;
             for(int i=0;i<3;i++){int bx=mainX+i*(mainW/3),by=y+78,bw=mainW/3-5;if(mx>=bx&&mx<=bx+bw&&my>=by&&my<=by+30){language=i;return true;}}
         }else if(rightTab<0){
