@@ -665,21 +665,84 @@ public final class ChessWorldGame {
     }
 
     private static void renderInvoker(VertexConsumer out, BoardTransform t, long gameTime) {
-        // Original low-poly arcane mage silhouette, with three elemental spheres.
-        box(out, t, -0.29D, 0.08D, -0.12D, 0.29D, 0.88D, 0.12D, 0xFF554A70);
-        box(out, t, -0.34D, 0.12D, -0.15D, 0.34D, 0.28D, 0.15D, 0xFFB69B57);
-        box(out, t, -0.24D, 0.84D, -0.14D, 0.24D, 1.22D, 0.14D, 0xFFB69B57);
-        box(out, t, -0.11D, 0.85D, 0.145D, 0.11D, 1.20D, 0.17D, 0xFFE8D5A0);
-        box(out, t, -0.075D, 1.19D, -0.08D, 0.075D, 1.40D, 0.08D, 0xFFD9B995);
-        sphere(out, t, 0.0D, 1.48D, 0.0D, 0.17D, 0xFFD7B99A, 12, 8);
-        // Pale hair and long side locks.
-        sphere(out, t, 0.0D, 1.615D, -0.015D, 0.185D, 0xFFE8D6B7, 14, 7);
-        box(out, t, -0.19D, 1.30D, -0.04D, -0.125D, 1.60D, 0.075D, 0xFFE8D6B7);
-        box(out, t, 0.125D, 1.30D, -0.04D, 0.19D, 1.60D, 0.075D, 0xFFE8D6B7);
-        box(out, t, -0.075D, 1.48D, 0.151D, -0.035D, 1.505D, 0.166D, 0xFF382D3D);
-        box(out, t, 0.035D, 1.48D, 0.151D, 0.075D, 1.505D, 0.166D, 0xFF382D3D);
+        // Reworked arcane mage silhouette: layered flowing robes, shaped sleeves,
+        // metallic shoulder pieces, long pale hair and a more readable face.
+        // The 3 elemental orbs and six-second permutation cycle are preserved.
 
-        // Floating Quas, Wex and Exort spheres; their left-to-right order shuffles every six seconds.
+        // Flowing outer robe and inner blue-violet tunic.
+        cone(out, t, 0.0D, -0.015D, 0.035D, 1.04D, 0.435D, 0xFF292B50, 28);
+        cone(out, t, 0.0D, 0.055D, 0.105D, 0.99D, 0.325D, 0xFF48457D, 24);
+        cylinder(out, t, 0.0D, -0.015D, 0.08D, 0.18D, 0.39D, 0xFF34345F, 24);
+
+        // Decorative robe panels and gold hems.
+        for (int side = -1; side <= 1; side += 2) {
+            box(out, t, side * 0.19D - 0.035D, 0.13D, 0.315D,
+                    side * 0.19D + 0.035D, 0.88D, 0.348D, 0xFFD0AD62);
+            box(out, t, side * 0.20D - 0.018D, 0.18D, 0.352D,
+                    side * 0.20D + 0.018D, 0.83D, 0.365D, 0xFFFFE6A4);
+        }
+        cylinder(out, t, 0.0D, 0.0D, 0.83D, 0.91D, 0.255D, 0xFFE1C078, 24);
+        cylinder(out, t, 0.0D, 0.0D, 0.79D, 0.84D, 0.265D, 0xFF6A4D8C, 24);
+        sphere(out, t, 0.0D, 0.86D, 0.276D, 0.075D, 0xFFFFD36A, 12, 8);
+
+        // Upper torso, layered mantle and a high gold-trimmed collar.
+        cylinder(out, t, 0.0D, 0.0D, 0.91D, 1.29D, 0.235D, 0xFF37375F, 20);
+        box(out, t, -0.18D, 0.96D, 0.183D, 0.18D, 1.22D, 0.229D, 0xFF54457F);
+        box(out, t, -0.045D, 0.98D, 0.231D, 0.045D, 1.20D, 0.252D, 0xFFD0A75B);
+        sphere(out, t, 0.0D, 1.12D, 0.269D, 0.065D, 0xFFFFD46D, 12, 8);
+        cylinder(out, t, 0.0D, 0.0D, 1.25D, 1.34D, 0.14D, 0xFFD8B765, 20);
+        cylinder(out, t, 0.0D, 0.0D, 1.32D, 1.39D, 0.17D, 0xFF47365D, 20);
+
+        // Long cape behind the shoulders, with gold shoulder clasps.
+        box(out, t, -0.31D, 0.60D, -0.19D, 0.31D, 1.32D, -0.115D, 0xFF242943);
+        box(out, t, -0.28D, 0.59D, -0.205D, -0.245D, 1.24D, -0.19D, 0xFFB89759);
+        box(out, t, 0.245D, 0.59D, -0.205D, 0.28D, 1.24D, -0.19D, 0xFFB89759);
+        sphere(out, t, -0.255D, 1.24D, -0.02D, 0.135D, 0xFFD7B56A, 12, 8);
+        sphere(out, t, 0.255D, 1.24D, -0.02D, 0.135D, 0xFFD7B56A, 12, 8);
+        sphere(out, t, -0.255D, 1.24D, 0.075D, 0.09D, 0xFF7862AC, 12, 8);
+        sphere(out, t, 0.255D, 1.24D, 0.075D, 0.09D, 0xFF7862AC, 12, 8);
+
+        // Neck and head.
+        cylinder(out, t, 0.0D, 0.0D, 1.30D, 1.47D, 0.075D, 0xFFD9B99A, 16);
+        sphere(out, t, 0.0D, 1.535D, 0.0D, 0.175D, 0xFFE4C4A4, 18, 12);
+        // Hair cap and long side locks frame the face instead of hiding it.
+        sphere(out, t, 0.0D, 1.665D, -0.018D, 0.185D, 0xFFE9E2D6, 18, 9);
+        renderLimb(out, t, new Vec3(-0.145D, 1.61D, 0.015D),
+                new Vec3(-0.18D, 1.10D, -0.015D), 0.052D, 0xFFE4DED0);
+        renderLimb(out, t, new Vec3(0.145D, 1.61D, 0.015D),
+                new Vec3(0.18D, 1.10D, -0.015D), 0.052D, 0xFFE4DED0);
+        renderLimb(out, t, new Vec3(-0.07D, 1.69D, -0.13D),
+                new Vec3(-0.12D, 1.22D, -0.17D), 0.045D, 0xFFF4EBDD);
+        renderLimb(out, t, new Vec3(0.07D, 1.69D, -0.13D),
+                new Vec3(0.12D, 1.22D, -0.17D), 0.045D, 0xFFF4EBDD);
+
+        // Face features face local +Z.
+        box(out, t, -0.083D, 1.555D, 0.151D, -0.028D, 1.575D, 0.166D, 0xFF4A3C43);
+        box(out, t, 0.028D, 1.555D, 0.151D, 0.083D, 1.575D, 0.166D, 0xFF4A3C43);
+        box(out, t, -0.084D, 1.583D, 0.145D, -0.026D, 1.596D, 0.163D, 0xFF9A795F);
+        box(out, t, 0.026D, 1.583D, 0.145D, 0.084D, 1.596D, 0.163D, 0xFF9A795F);
+        sphere(out, t, 0.0D, 1.525D, 0.169D, 0.025D, 0xFFD5A987, 8, 6);
+
+        // Floating sleeves, articulated forearms and hands.
+        Vec3 leftShoulder = new Vec3(-0.25D, 1.22D, 0.0D);
+        Vec3 leftElbow = new Vec3(-0.40D, 1.02D, 0.20D);
+        Vec3 leftHand = new Vec3(-0.34D, 0.93D, 0.34D);
+        renderLimb(out, t, leftShoulder, leftElbow, 0.125D, 0xFF54457F);
+        renderLimb(out, t, leftElbow, leftHand, 0.075D, 0xFFDCC0A2);
+        sphere(out, t, leftHand.x, leftHand.y, leftHand.z, 0.075D, 0xFFDCC0A2, 10, 7);
+
+        Vec3 rightShoulder = new Vec3(0.25D, 1.22D, 0.0D);
+        Vec3 rightElbow = new Vec3(0.40D, 1.06D, 0.18D);
+        Vec3 rightHand = new Vec3(0.39D, 1.18D, 0.32D);
+        renderLimb(out, t, rightShoulder, rightElbow, 0.125D, 0xFF54457F);
+        renderLimb(out, t, rightElbow, rightHand, 0.07D, 0xFFDCC0A2);
+        sphere(out, t, rightHand.x, rightHand.y, rightHand.z, 0.075D, 0xFFDCC0A2, 10, 7);
+
+        // Gold circlet and center rune.
+        cylinder(out, t, 0.0D, 0.0D, 1.635D, 1.67D, 0.184D, 0xFFD6B15F, 20);
+        sphere(out, t, 0.0D, 1.69D, 0.055D, 0.045D, 0xFF7BCBFF, 10, 7);
+
+        // Quas, Wex and Exort: their order changes every six seconds.
         int[][] orders = {
                 {0, 1, 2}, {1, 0, 2}, {2, 1, 0},
                 {0, 2, 1}, {1, 2, 0}, {2, 0, 1}
@@ -690,12 +753,12 @@ public final class ChessWorldGame {
         for (int i = 0; i < 3; i++) {
             int element = order[i];
             double angle = orbit + i * (Math.PI * 2.0D / 3.0D);
-            double x = Math.cos(angle) * 0.38D;
-            double z = 0.16D + Math.sin(angle) * 0.22D;
-            double y = 1.30D + Math.sin(angle * 1.7D) * 0.10D;
-            sphere(out, t, x, y, z, 0.105D, orbColors[element], 12, 7);
-            sphere(out, t, x - 0.025D, y + 0.035D, z + 0.055D,
-                    0.035D, 0xFFFFF4DF, 8, 5);
+            double x = Math.cos(angle) * 0.40D;
+            double z = 0.27D + Math.sin(angle) * 0.22D;
+            double y = 1.38D + Math.sin(angle * 1.7D) * 0.12D;
+            sphere(out, t, x, y, z, 0.105D, orbColors[element], 16, 10);
+            sphere(out, t, x - 0.028D, y + 0.038D, z + 0.062D,
+                    0.036D, 0xFFFFF4DF, 10, 7);
         }
     }
 
