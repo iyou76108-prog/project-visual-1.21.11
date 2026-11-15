@@ -1,6 +1,12 @@
 package dev.projectvisual.client;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.platform.BlendFunction;
+import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
@@ -9,9 +15,14 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.AABB;
@@ -21,6 +32,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,6 +46,28 @@ public final class VisualWorldEffects {
     private static final int MAX_BREADCRUMBS = 42;
     private static final Map<UUID, Deque<Vec3>> PLAYER_TRAILS = new HashMap<>();
     private static final Deque<Vec3> BREADCRUMBS = new ArrayDeque<>();
+    private static final List<BlockPos> CHEST_ESP_BLOCKS = new ArrayList<>();
+
+    private static final RenderPipeline THROUGH_WALL_LINES_PIPELINE =
+            RenderPipeline.builder()
+                    .withLocation(Identifier.fromNamespaceAndPath(
+                            ProjectVisualClient.MOD_ID, "pipeline/through_wall_lines"))
+                    .withVertexShader("core/rendertype_lines")
+                    .withFragmentShader("core/rendertype_lines")
+                    .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Fog", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+                    .withBlend(BlendFunction.TRANSLUCENT)
+                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                    .withDepthWrite(false)
+                    .withCull(false)
+                    .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH, VertexFormat.Mode.LINES)
+                    .build();
+
+    private static final RenderType THROUGH_WALL_LINES = RenderType.create(
+            "project_visual_through_wall_lines",
+            RenderSetup.builder(THROUGH_WALL_LINES_PIPELINE).createRenderSetup());
 
     private static KeyMapping zoomKey;
     private static boolean smoothCameraApplied;
@@ -72,6 +106,7 @@ public final class VisualWorldEffects {
         }
 
         tickCounter++;
+        if ((tickCounter % 20) == 0) refreshChestEsp(client);
         if ((tickCounter & 1) != 0) return;
 
         if (VisualFeatures.isEnabled("Breadcrumbs")) {
@@ -136,17 +171,21 @@ public final class VisualWorldEffects {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null || client.options.hideGui) return;
 
-        boolean drawHitboxes = VisualFeatures.isEnabled("Hitbox Visual");
+        boolean drawPlayerHitboxes = VisualFeatures.isEnabled("Hitbox Visual");
+        boolean drawEntityHitboxes = VisualFeatures.isEnabled("Hitboxes");
+        boolean drawChestEsp = VisualFeatures.isEnabled("Chest ESP");
         boolean drawTrails = VisualFeatures.isEnabled("Player Trails");
         boolean drawBreadcrumbs = VisualFeatures.isEnabled("Breadcrumbs");
         boolean drawHat = VisualFeatures.isEnabled("China Hat");
         boolean drawBlockOverlay = VisualFeatures.isEnabled("Block Overlay");
-        if (!drawHitboxes && !drawTrails && !drawBreadcrumbs && !drawHat && !drawBlockOverlay) return;
+        boolean drawNormalLines = drawPlayerHitboxes || drawTrails || drawBreadcrumbs || drawHat || drawBlockOverlay;
+        if (!drawNormalLines && !drawEntityHitboxes && !drawChestEsp) return;
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
-        VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
+        VertexConsumer lines = drawNormalLines
+                ? context.consumers().getBuffer(RenderTypes.lines()) : null;
 
-        if (drawHitboxes) {
+        if (drawPlayerHitboxes) {
             for (Player player : client.level.players()) {
                 if (player == client.player || !player.isAlive()
                         || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
@@ -172,7 +211,8 @@ public final class VisualWorldEffects {
                 int size = trail.size();
                 for (Vec3 point : trail) {
                     float alpha = 0.25F + 0.65F * ((float) ++index / Math.max(1, size));
-                    int color = (Math.min(255, (int) (alpha * 255.0F)) << 24) | 0x0054D6C8;
+                    int color = (Math.min(255, (int) (alpha * 255.0F)) << 24)
+                        | (VisualFeatures.accentColor() & 0x00FFFFFF);
                     drawMarker(context, lines, point, camera, color, 0.055D);
                 }
             }
@@ -188,6 +228,52 @@ public final class VisualWorldEffects {
                 int color = (Math.min(255, (int) (alpha * 255.0F)) << 24)
                         | (VisualFeatures.accentColor() & 0x00FFFFFF);
                 drawMarker(context, lines, point, camera, color, 0.075D);
+            }
+        }
+
+        // ESP overlays use a no-depth-test line pipeline, so boxes remain visible
+        // through terrain and other world geometry like a conventional client ESP.
+        if (drawEntityHitboxes || drawChestEsp) {
+            VertexConsumer espLines = context.consumers().getBuffer(THROUGH_WALL_LINES);
+            int color = VisualFeatures.accentColor();
+            if (drawEntityHitboxes) {
+                for (Entity entity : client.level.entitiesForRendering()) {
+                    if (!(entity instanceof LivingEntity living) || living == client.player
+                            || !living.isAlive() || client.player.distanceToSqr(living) > 64.0D * 64.0D) continue;
+                    drawBox(context, espLines, living.getBoundingBox(), camera, color, 2.0F);
+                }
+            }
+            if (drawChestEsp) {
+                for (BlockPos pos : CHEST_ESP_BLOCKS) {
+                    AABB chest = new AABB(pos.getX(), pos.getY(), pos.getZ(),
+                            pos.getX() + 1.0D, pos.getY() + 1.0D, pos.getZ() + 1.0D);
+                    drawBox(context, espLines, chest, camera, color, 2.5F);
+                }
+            }
+        }
+    }
+
+    private static void refreshChestEsp(Minecraft client) {
+        if (!VisualFeatures.isEnabled("Chest ESP") || client.player == null || client.level == null) {
+            CHEST_ESP_BLOCKS.clear();
+            return;
+        }
+
+        CHEST_ESP_BLOCKS.clear();
+        BlockPos origin = client.player.blockPosition();
+        int horizontalRadius = 24;
+        int verticalRadius = 12;
+        for (int x = -horizontalRadius; x <= horizontalRadius; x++) {
+            for (int y = -verticalRadius; y <= verticalRadius; y++) {
+                for (int z = -horizontalRadius; z <= horizontalRadius; z++) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    if (!client.level.hasChunkAt(pos)) continue;
+                    var block = client.level.getBlockState(pos).getBlock();
+                    if (block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST
+                            || block == Blocks.ENDER_CHEST || block == Blocks.BARREL) {
+                        CHEST_ESP_BLOCKS.add(pos.immutable());
+                    }
+                }
             }
         }
     }
