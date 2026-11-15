@@ -20,7 +20,7 @@ public final class ClickGuiScreen extends Screen {
         {"Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation"},
         {"View Model","Camera Clip","Zoom","Smooth Camera","Perspective"},
         {"Notifications","Watermark","Module List","Custom Font","Color Theme"},
-        {"Player ESP","Hitbox Expander"},
+        {"Player ESP","Hitbox Visual"},
         {"Skin Manager","Skin Preview","Capes","Outfits"}
     };
     private static final String[][] DESC={
@@ -31,7 +31,7 @@ public final class ClickGuiScreen extends Screen {
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
         {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
-        {"Outline nearby players","Enlarge player hitboxes"},
+        {"Outline nearby players","Visual-only hitbox outline"},
         {"Choose player skins","Preview before applying","Cape collection","Saved appearance presets"}
     };
     private int category=0, rightTab=-1, scroll=0;
@@ -94,12 +94,8 @@ public final class ClickGuiScreen extends Screen {
                 boolean active = false;
                 if (category == 0 && n == 0) { state = VisualHud.isEnabled() ? "ON" : "OFF"; active = VisualHud.isEnabled(); }
                 if (category == 7 && n == 0) { state = VisualFeatures.isPlayerEsp() ? "ON" : "OFF"; active = VisualFeatures.isPlayerEsp(); }
-                if (category == 7 && n == 1) { state = VisualFeatures.isHitboxEnabled() ? "ON" : "OFF"; active = VisualFeatures.isHitboxEnabled(); }
+                if (category == 7 && n == 1) { state = "IN DEVELOPMENT"; }
                 g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:ACCENT,false);
-                if (category == 7 && n == 1) {
-                    String size = String.format(java.util.Locale.ROOT, "Size: %.2f  (- / +)", VisualFeatures.getHitboxExpansion());
-                    g.drawString(font,size,cx+10,cy+35,MUTED,false);
-                }
             }
         }
         g.drawString(font,"RIGHT SHIFT  /  ESC",x+16,y+ph-23,MUTED,false);
@@ -150,10 +146,6 @@ public final class ClickGuiScreen extends Screen {
             int cardY=y+74;
             if(mx>=mainX&&mx<=mainX+cardW&&my>=cardY&&my<=cardY+48){VisualFeatures.setPlayerEsp(!VisualFeatures.isPlayerEsp());return true;}
             int hitX=mainX+cardW+12;
-            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY+28&&my<=cardY+48){
-                VisualFeatures.changeHitboxExpansion(mx<hitX+cardW/2?-0.05:0.05);return true;
-            }
-            if(mx>=hitX&&mx<=hitX+cardW&&my>=cardY&&my<=cardY+27){VisualFeatures.setHitboxEnabled(!VisualFeatures.isHitboxEnabled());return true;}
         }
         return super.mouseClicked(e,dbl);
     }
