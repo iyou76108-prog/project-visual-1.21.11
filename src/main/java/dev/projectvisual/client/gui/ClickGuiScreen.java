@@ -2,7 +2,7 @@ package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
-import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
+import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;\nimport dev.projectvisual.client.gui.LockpickScreen;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -25,7 +25,7 @@ public final class ClickGuiScreen extends Screen {
         {"View Model","Camera Clip","Zoom","Smooth Camera","Perspective"},
         {"Notifications","Watermark","Module List","Custom Font","Color Theme"},
         {"Hitboxes","Chest ESP","Player ESP","Hitbox Visual"},
-        {"Queen Skin","Invoker Skin","Magnus AFK","Axe AFK","Skin Manager","Skin Preview","Capes","Outfits"}
+        {"Queen Skin","Invoker Skin","Interworlder Mask","Magnus AFK","Axe AFK","Watcher AFK","Skin Manager","Skin Preview","Capes","Outfits"}
     };
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
@@ -36,7 +36,7 @@ public final class ClickGuiScreen extends Screen {
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
         {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
         {"Meteor-style player targeting expansion (+0.5)","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
-        {"Turn your avatar into a 3D chess queen","Invoker with three rotating elemental orbs","Magnus Carlsen visits after 30 seconds AFK","Axe rushes in and swings his axe after AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"},
+        {"Turn your avatar into a 3D chess queen","Invoker with three rotating elemental orbs","Wear the glowing Interworlder mask","Magnus Carlsen visits after 30 seconds AFK","Axe rushes in and swings his axe after AFK","The Watcher pulls you toward the void while AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"},
     };
     private int category=0, rightTab=-1, scroll=0;
     private static int language=0;
@@ -165,7 +165,12 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,"Minesweeper",x+12,by+98,TEXT,false);
             g.drawString(font,tr("3D board  /  10 mines  /  Safe first click","3D-доска  /  10 мин  /  Первый ход безопасен","3D тақта  /  10 мина  /  Бірінші жүріс қауіпсіз"),x+12,by+116,MUTED,false);
             g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+139,VisualFeatures.accentColor(),false);
-            g.drawString(font,tr("Chess: right-click to select and move. Minesweeper: right-click reveal, Shift+right-click flag.","Шахматы: ПКМ выбрать и сходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг.","Шахмат: оң жақпен таңдау. Сапер: ашу — оң жақ, жалау — Shift+оң жақ."),x,y+233,MUTED,false);
+            g.fill(x,by+176,x+w,by+252,CARD);
+            g.fill(x,by+176,x+3,by+252,VisualFeatures.accentColor());
+            g.drawString(font,"Pick the Lock",x+12,by+186,TEXT,false);
+            g.drawString(font,tr("Timing game  /  Watcher replaces Slark","Тайминг-игра  /  вместо Сларка — Смотрящий","Тайминг ойыны  /  Сларк орнына — Бақылаушы"),x+12,by+204,MUTED,false);
+            g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+227,VisualFeatures.accentColor(),false);
+            g.drawString(font,tr("Chess: right-click to move. Minesweeper: right-click reveal, Shift+right-click flag. Lockpick: click on the moving marker.","Шахматы: ПКМ ходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг. Взлом: ЛКМ по маркеру в цветной зоне.","Шахмат: оң жақпен жүру. Сапер: ашу — оң жақ, жалау — Shift+оң жақ. Құлып: түсті аймақта бас."),x,y+330,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
             g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
@@ -203,6 +208,10 @@ public final class ClickGuiScreen extends Screen {
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by+88&&my<=by+164){
                 MinesweeperWorldGame.start();
                 Minecraft.getInstance().setScreen(null);
+                return true;
+            }
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=by+176&&my<=by+252){
+                Minecraft.getInstance().setScreen(new LockpickScreen());
                 return true;
             }
         }else if(rightTab<0){
