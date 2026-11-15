@@ -373,13 +373,15 @@ public final class ChessWorldGame {
         Vec3 renderOrigin = new Vec3(boardCenter.x - camera.x, boardCenter.y - camera.y, boardCenter.z - camera.z);
         BoardTransform transform = new BoardTransform(renderOrigin, right, forward, scale, lift);
 
+        // MultiBufferSource buffers are only valid until getBuffer() is called
+        // for another render type. Finish all quads before switching to lines.
         VertexConsumer quads = context.consumers().getBuffer(RenderTypes.debugQuads());
-        VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
-
-        renderPortal(lines, transform, camera, progress);
         renderBoard(quads, transform);
-        renderHighlights(lines, transform, camera);
         renderPieces(quads, transform, camera);
+
+        VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
+        renderPortal(lines, transform, camera, progress);
+        renderHighlights(lines, transform, camera);
     }
 
     private static void renderPortal(VertexConsumer lines, BoardTransform transform,
