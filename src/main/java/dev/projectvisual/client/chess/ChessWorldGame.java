@@ -1,6 +1,9 @@
 package dev.projectvisual.client.chess;
 
 import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.projectvisual.client.ProjectVisualClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -9,7 +12,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderPipelines;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
 import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.particles.ParticleTypes;
@@ -50,12 +52,17 @@ public final class ChessWorldGame {
     // closed 3D meshes to blend over their front faces. Use an opaque,
     // depth-writing pipeline for the chess board and pieces instead.
     private static final RenderPipeline CHESS_SOLID_PIPELINE =
-            RenderPipeline.builder(RenderPipelines.DEBUG_FILLED_SNIPPET)
+            RenderPipeline.builder()
                     .withLocation(Identifier.fromNamespaceAndPath(
                             ProjectVisualClient.MOD_ID, "pipeline/chess_solid"))
+                    .withVertexShader("core/position_color")
+                    .withFragmentShader("core/position_color")
+                    .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Projection", UniformType.UNIFORM_BUFFER)
                     .withoutBlend()
                     .withDepthWrite(true)
                     .withCull(false)
+                    .withVertexFormat(DefaultVertexFormat.POSITION_COLOR, VertexFormat.Mode.QUADS)
                     .build();
 
     private static final RenderType CHESS_SOLID_RENDER_TYPE = RenderType.create(
