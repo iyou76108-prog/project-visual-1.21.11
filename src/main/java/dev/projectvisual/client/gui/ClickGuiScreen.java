@@ -23,7 +23,7 @@ public final class ClickGuiScreen extends Screen {
         {"View Model","Camera Clip","Zoom","Smooth Camera","Perspective"},
         {"Notifications","Watermark","Module List","Custom Font","Color Theme"},
         {"Player ESP","Hitbox Visual"},
-        {"Skin Manager","Skin Preview","Capes","Outfits"}
+        {"Queen Skin","Magnus AFK","Skin Manager","Skin Preview","Capes","Outfits"}
     };
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
@@ -34,7 +34,7 @@ public final class ClickGuiScreen extends Screen {
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
         {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
         {"Outline nearby players","Visual-only hitbox outline"},
-        {"Choose player skins","Preview before applying","Cape collection","Saved appearance presets"}
+        {"Turn your avatar into a 3D chess queen","Magnus Carlsen visits after 30 seconds AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"}
     };
     private int category=0, rightTab=-1, scroll=0;
     private static int language=0;
