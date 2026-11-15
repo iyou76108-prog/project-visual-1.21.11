@@ -7,7 +7,6 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
-import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import java.util.Map;
 
@@ -48,9 +47,8 @@ public final class VisualHud {
             line(g,mc,"JUMP "+(mc.options.keyJump.isDown()?"ON":"OFF"),x,yy); yy+=17;
         }
         if(VisualFeatures.isEnabled("Armor HUD")){
-            Inventory inv=mc.player.getInventory();
             StringBuilder armor=new StringBuilder("ARMOR  ");
-            for(ItemStack stack:inv.armor) armor.append(stack.isEmpty()?"-":stack.getMaxDamage()-stack.getDamage()).append("  ");
+            for(ItemStack stack:mc.player.getArmorSlots()) armor.append(stack.isEmpty()?"-":stack.getMaxDamage()-stack.getDamageValue()).append("  ");
             line(g,mc,armor.toString(),x,yy); yy+=17;
         }
         if(VisualFeatures.isEnabled("Potion HUD")){
