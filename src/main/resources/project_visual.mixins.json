@@ -11,7 +11,9 @@
     "MouseClickMixin",
     "ItemPhysicsMixin",
     "FirstPersonVisualMixin",
-    "PlayerNameTagsMixin"
+    "PlayerNameTagsMixin",
+    "LivingEntityVisualMixin",
+    "GuiCrosshairMixin"
   ],
   "injectors": {
     "defaultRequire": 1
