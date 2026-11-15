@@ -8,15 +8,12 @@
     "FullbrightMixin",
     "ClientWorldVisualMixin",
     "ZoomMixin",
-    "MouseClickMixin"
-  ,
-    "CameraClipMixin"
-  ,
-    "ItemPhysicsMixin"
-  ,
-    "FirstPersonVisualMixin"
-  ,
+    "MouseClickMixin",
+    "ItemPhysicsMixin",
+    "FirstPersonVisualMixin",
     "PlayerNameTagsMixin"
   ],
-  "injectors": { "defaultRequire": 1 }
+  "injectors": {
+    "defaultRequire": 1
+  }
 }
