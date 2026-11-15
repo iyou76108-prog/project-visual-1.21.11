@@ -2,7 +2,7 @@ package dev.projectvisual.client.gui;
 
 import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
-import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;\nimport dev.projectvisual.client.gui.LockpickScreen;
+import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
