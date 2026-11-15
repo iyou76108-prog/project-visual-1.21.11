@@ -14,7 +14,8 @@ public final class VisualFeatures {
             "Fullbright","Weather","Time Changer","Ambience","Block Overlay","Breadcrumbs",
             "Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation",
             "View Model","Camera Clip","Zoom","Smooth Camera","Perspective",
-            "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual"
+            "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual",
+            "Queen Skin","Magnus AFK"
         };
         for (String module : modules) STATES.put(module, false);
         STATES.put("FPS Counter", true);
