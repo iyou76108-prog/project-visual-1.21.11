@@ -158,7 +158,7 @@ test("global service: accounts, friend requests, invitations and validated onlin
 
       const whiteMoveState = waitForEvent(whiteSocket, event =>
         event.type === "match_state" && event.matchId === accepted.matchId
-        && event.fen.includes(" e3 "));
+        && event.turn === "black" && event.fen.includes("4P3"));
       whiteSocket.send(JSON.stringify({
         type: "move", matchId: accepted.matchId, uci: "e2e4"
       }));
