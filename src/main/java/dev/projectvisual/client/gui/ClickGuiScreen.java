@@ -3,7 +3,6 @@ package dev.projectvisual.client.gui;
 import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
-import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -198,11 +197,6 @@ public final class ClickGuiScreen extends Screen {
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
                 ChessWorldGame.start();
-                Minecraft.getInstance().setScreen(null);
-                return true;
-            }
-            if(mx>=mainX&&mx<=mainX+mainW&&my>=by+88&&my<=by+164){
-                MinesweeperWorldGame.start();
                 Minecraft.getInstance().setScreen(null);
                 return true;
             }
