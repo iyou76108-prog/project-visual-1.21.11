@@ -17,7 +17,7 @@ public final class VisualFeatures {
             "Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation",
             "View Model","Camera Clip","Zoom","Smooth Camera","Perspective",
             "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual",
-            "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Hitboxes","Chest ESP"
+            "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Interworlder Mask","Watcher AFK","Hitboxes","Chest ESP"
         };
         for (String module : modules) STATES.put(module, false);
         STATES.put("FPS Counter", true);
