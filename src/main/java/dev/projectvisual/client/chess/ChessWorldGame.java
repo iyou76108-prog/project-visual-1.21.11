@@ -98,8 +98,9 @@ public final class ChessWorldGame {
         double yaw = Math.toRadians(client.player.getYRot());
         forward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
         right = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
-        boardCenter = client.player.position().add(forward.scale(3.75D));
         boardY = client.player.getEyeY() - 0.84D;
+        Vec3 anchor = client.player.position().add(forward.scale(3.75D));
+        boardCenter = new Vec3(anchor.x, boardY, anchor.z);
 
         client.player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal(
@@ -222,7 +223,8 @@ public final class ChessWorldGame {
     private static int rayPickSquare(Minecraft client) {
         Vec3 eye = client.player.getEyePosition();
         Vec3 look = client.player.getLookAngle();
-        double planeY = boardY + 0.035D + introLift();
+        double bob = Math.sin((client.level.getGameTime() % 100000L) * 0.055D) * 0.018D * easeOut(introProgress());
+        double planeY = boardY + 0.035D + introLift() + bob;
         if (look.y >= -0.015D) return -1;
         double distance = (planeY - eye.y) / look.y;
         if (distance <= 0.0D || distance > 16.0D) return -1;
@@ -343,7 +345,7 @@ public final class ChessWorldGame {
         int rank = square / 8;
         double x = -HALF + (file + 0.5D) * CELL;
         double z = -HALF + (rank + 0.5D) * CELL;
-        return boardCenter.add(right.scale(x)).add(forward.scale(z)).add(0.0D, boardY + height, 0.0D);
+        return boardCenter.add(right.scale(x)).add(forward.scale(z)).add(0.0D, height, 0.0D);
     }
 
     private static float introProgress() {
@@ -368,7 +370,8 @@ public final class ChessWorldGame {
         float progress = easeOut(introProgress());
         float scale = 0.12F + 0.88F * progress;
         double lift = introLift() + Math.sin((client.level.getGameTime() % 100000L) * 0.055D) * 0.018D * progress;
-        BoardTransform transform = new BoardTransform(boardCenter, right, forward, scale, lift);
+        Vec3 renderOrigin = new Vec3(boardCenter.x - camera.x, boardCenter.y - camera.y, boardCenter.z - camera.z);
+        BoardTransform transform = new BoardTransform(renderOrigin, right, forward, scale, lift);
 
         VertexConsumer quads = context.consumers().getBuffer(RenderTypes.debugQuads());
         VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
@@ -669,9 +672,9 @@ public final class ChessWorldGame {
     private static void emitLine(VertexConsumer out, Vec3 a, Vec3 b,
                                  Vec3 camera, int color, float width) {
         out.setLineWidth(width);
-        out.addVertex((float) (a.x - camera.x), (float) (a.y - camera.y), (float) (a.z - camera.z))
+        out.addVertex((float) a.x, (float) a.y, (float) a.z)
                 .setColor(color).setNormal(0.0F, 1.0F, 0.0F);
-        out.addVertex((float) (b.x - camera.x), (float) (b.y - camera.y), (float) (b.z - camera.z))
+        out.addVertex((float) b.x, (float) b.y, (float) b.z)
                 .setColor(color).setNormal(0.0F, 1.0F, 0.0F);
     }
 
