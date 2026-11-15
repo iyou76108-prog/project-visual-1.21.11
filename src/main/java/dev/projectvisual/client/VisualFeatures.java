@@ -36,7 +36,10 @@ public final class VisualFeatures {
     }
 
     public static void toggle(String module) {
-        setEnabled(module, !isEnabled(module));
+        boolean enabled = !isEnabled(module);
+        if (enabled && module.equals("Queen Skin")) setEnabled("Invoker Skin", false);
+        if (enabled && module.equals("Invoker Skin")) setEnabled("Queen Skin", false);
+        setEnabled(module, enabled);
     }
 
     public static Map<String, Boolean> getStates() {
