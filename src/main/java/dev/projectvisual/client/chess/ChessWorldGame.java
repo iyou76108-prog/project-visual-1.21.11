@@ -68,7 +68,7 @@ public final class ChessWorldGame {
 
     private static final RenderType CHESS_SOLID_RENDER_TYPE = RenderType.create(
             "project_visual_chess_solid",
-            RenderSetup.builder(CHESS_SOLID_PIPELINE).build());
+            RenderSetup.builder(CHESS_SOLID_PIPELINE).createRenderSetup());
 
     private static final ChessEngine GAME = new ChessEngine();
 
