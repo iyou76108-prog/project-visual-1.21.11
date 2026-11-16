@@ -13,6 +13,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.rendertype.RenderSetup;
@@ -72,6 +73,9 @@ public final class VisualWorldEffects {
     private static KeyMapping zoomKey;
     private static boolean smoothCameraApplied;
     private static boolean previousSmoothCamera;
+    private static boolean perspectiveApplied;
+    private static CameraType previousPerspective;
+    private static CameraType appliedPerspective;
     private static int tickCounter;
 
     private VisualWorldEffects() {}
@@ -93,6 +97,7 @@ public final class VisualWorldEffects {
     private static void tick(Minecraft client) {
         if (client.player == null || client.level == null) {
             restoreSmoothCamera(client);
+            restorePerspective(client);
             return;
         }
 
@@ -103,6 +108,22 @@ public final class VisualWorldEffects {
             smoothCameraApplied = true;
         } else if (!smoothEnabled) {
             restoreSmoothCamera(client);
+        }
+
+        boolean forcePerspective = VisualFeatures.isEnabled("Perspective");
+        if (forcePerspective && !perspectiveApplied) {
+            previousPerspective = client.options.getCameraType();
+            appliedPerspective = perspectiveForMode();
+            client.options.setCameraType(appliedPerspective);
+            perspectiveApplied = true;
+        } else if (forcePerspective && perspectiveApplied) {
+            CameraType desired = perspectiveForMode();
+            if (desired != appliedPerspective) {
+                client.options.setCameraType(desired);
+                appliedPerspective = desired;
+            }
+        } else if (!forcePerspective) {
+            restorePerspective(client);
         }
 
         tickCounter++;
@@ -166,6 +187,22 @@ public final class VisualWorldEffects {
                 case 3 -> client.level.addParticle(ParticleTypes.FLAME, x, y, z, vx * 0.4D, vy, vz * 0.4D);
                 default -> client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
             }
+        }
+    }
+
+    private static CameraType perspectiveForMode() {
+        return VisualFeatures.perspectiveMode() == 0
+                ? CameraType.THIRD_PERSON_BACK : CameraType.THIRD_PERSON_FRONT;
+    }
+
+    private static void restorePerspective(Minecraft client) {
+        if (perspectiveApplied) {
+            if (client.options.getCameraType() == appliedPerspective && previousPerspective != null) {
+                client.options.setCameraType(previousPerspective);
+            }
+            perspectiveApplied = false;
+            previousPerspective = null;
+            appliedPerspective = null;
         }
     }
 
