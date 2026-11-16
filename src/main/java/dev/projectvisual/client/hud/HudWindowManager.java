@@ -58,6 +58,7 @@ public final class HudWindowManager {
                               int defaultX, int defaultY, int accentColor) {
         ensureLoaded();
         Window window = WINDOWS.computeIfAbsent(id, ignored -> new Window());
+        window.width = width;
         if (!window.positioned) {
             window.x = defaultX;
             window.y = defaultY;
