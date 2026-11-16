@@ -144,7 +144,7 @@ public final class VisualWorldEffects {
             Set<UUID> online = new HashSet<>();
             for (Player player : client.level.players()) {
                 if (player == client.player || !player.isAlive()
-                        || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
+                        || client.player.distanceToSqr(player) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
                 UUID id = player.getUUID();
                 online.add(id);
                 Deque<Vec3> trail = PLAYER_TRAILS.computeIfAbsent(id, ignored -> new ArrayDeque<>());
@@ -234,7 +234,7 @@ public final class VisualWorldEffects {
         if (drawPlayerHitboxes) {
             for (Player player : client.level.players()) {
                 if (player == client.player || !player.isAlive()
-                        || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
+                        || client.player.distanceToSqr(player) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
                 int color = VisualFeatures.accentColor();
                 drawBox(context, lines, player.getBoundingBox(), camera, color, VisualFeatures.hitboxVisualWidth());
             }
@@ -285,7 +285,7 @@ public final class VisualWorldEffects {
             if (drawEntityHitboxes) {
                 for (Entity entity : client.level.entitiesForRendering()) {
                     if (!(entity instanceof Player target) || target == client.player
-                            || !target.isAlive() || client.player.distanceToSqr(target) > 64.0D * 64.0D) continue;
+                            || !target.isAlive() || client.player.distanceToSqr(target) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
                     drawBox(context, espLines, target.getBoundingBox().inflate(VisualFeatures.hitboxExpansion()),
                             camera, color, VisualFeatures.hitboxVisualWidth());
                 }
@@ -308,8 +308,8 @@ public final class VisualWorldEffects {
 
         CHEST_ESP_BLOCKS.clear();
         BlockPos origin = client.player.blockPosition();
-        int horizontalRadius = 24;
-        int verticalRadius = 12;
+        int horizontalRadius = Math.min(32, VisualFeatures.chestEspRadius());
+        int verticalRadius = Math.max(4, horizontalRadius / 2);
         for (int x = -horizontalRadius; x <= horizontalRadius; x++) {
             for (int y = -verticalRadius; y <= verticalRadius; y++) {
                 for (int z = -horizontalRadius; z <= horizontalRadius; z++) {
@@ -333,17 +333,17 @@ public final class VisualWorldEffects {
 
         for (int i = 0; i < 16; i++) {
             double angle = (Math.PI * 2.0D * i) / 16.0D;
-            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.48D, brimY,
-                    base.z + Math.sin(angle) * 0.48D);
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.48D * VisualFeatures.chinaHatSize(), brimY,
+                    base.z + Math.sin(angle) * 0.48D * VisualFeatures.chinaHatSize());
             drawMarker(context, lines, point, camera, color, 0.035D);
         }
         for (int i = 0; i < 12; i++) {
             double angle = (Math.PI * 2.0D * i) / 12.0D;
-            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.23D, brimY + 0.22D,
-                    base.z + Math.sin(angle) * 0.23D);
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.23D * VisualFeatures.chinaHatSize(), brimY + 0.22D * VisualFeatures.chinaHatSize(),
+                    base.z + Math.sin(angle) * 0.23D * VisualFeatures.chinaHatSize());
             drawMarker(context, lines, point, camera, color, 0.03D);
         }
-        drawMarker(context, lines, new Vec3(base.x, brimY + 0.43D, base.z),
+        drawMarker(context, lines, new Vec3(base.x, brimY + 0.43D * VisualFeatures.chinaHatSize(), base.z),
                 camera, color, 0.04D);
     }
 
