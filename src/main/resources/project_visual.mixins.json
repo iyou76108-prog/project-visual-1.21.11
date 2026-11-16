@@ -5,6 +5,7 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "EntityHitboxMixin",
+    "CameraClipMixin",
     "FullbrightMixin",
     "ClientWorldVisualMixin",
     "ZoomMixin",
