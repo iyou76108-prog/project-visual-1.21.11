@@ -15,6 +15,47 @@ public final class ChessEngine {
     private int ep=-1, halfmove=0, fullmove=1;
 
     public ChessEngine(){ reset(); }
+
+    /** Builds a local rules-engine position from a server-supplied FEN string. */
+    public ChessEngine(String fen) {
+        String[] fields = fen.trim().split("\\s+");
+        if (fields.length < 4) throw new IllegalArgumentException("Invalid FEN");
+        String[] ranks = fields[0].split("/");
+        if (ranks.length != 8) throw new IllegalArgumentException("Invalid FEN board");
+        board = new char[64];
+        for (int row = 0; row < 8; row++) {
+            int file = 0;
+            int rank = 7 - row;
+            for (int i = 0; i < ranks[row].length(); i++) {
+                char value = ranks[row].charAt(i);
+                if (value >= '1' && value <= '8') {
+                    file += value - '0';
+                } else if ("prnbqkPRNBQK".indexOf(value) >= 0 && file < 8) {
+                    board[rank * 8 + file++] = value;
+                } else {
+                    throw new IllegalArgumentException("Invalid FEN piece placement");
+                }
+            }
+            if (file != 8) throw new IllegalArgumentException("Invalid FEN rank width");
+        }
+        whiteToMove = fields[1].equals("w");
+        String rights = fields[2];
+        wk = rights.contains("K");
+        wq = rights.contains("Q");
+        bk = rights.contains("k");
+        bq = rights.contains("q");
+        ep = fields[3].equals("-") ? -1 : parseSquare(fields[3]);
+        halfmove = fields.length > 4 ? Integer.parseInt(fields[4]) : 0;
+        fullmove = fields.length > 5 ? Integer.parseInt(fields[5]) : 1;
+    }
+
+    private static int parseSquare(String value) {
+        if (value.length() != 2 || value.charAt(0) < 'a' || value.charAt(0) > 'h'
+                || value.charAt(1) < '1' || value.charAt(1) > '8') {
+            throw new IllegalArgumentException("Invalid FEN square");
+        }
+        return (value.charAt(1) - '1') * 8 + value.charAt(0) - 'a';
+    }
     private ChessEngine(ChessEngine p){
         board=p.board.clone(); whiteToMove=p.whiteToMove; wk=p.wk;wq=p.wq;bk=p.bk;bq=p.bq;
         ep=p.ep;halfmove=p.halfmove;fullmove=p.fullmove;
