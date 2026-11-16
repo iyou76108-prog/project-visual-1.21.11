@@ -8,7 +8,9 @@ import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
@@ -18,7 +20,6 @@ public final class VisualHud {
     private static final int PANEL = 0xC910121B;
     private static final int TEXT = 0xFFF3F0FF;
     private static final int MUTED = 0xFFAAA6BA;
-    private static boolean enabled = true;
     private static final Deque<Long> leftClicks = new ArrayDeque<>();
     private static final Deque<Long> rightClicks = new ArrayDeque<>();
     private static final Deque<Notification> notifications = new ArrayDeque<>();
@@ -30,16 +31,8 @@ public final class VisualHud {
 
     private VisualHud() {}
 
-    public static boolean isEnabled() {
-        return enabled;
-    }
-
-    public static void setEnabled(boolean value) {
-        enabled = value;
-    }
-
     public static void triggerDamageFlash() {
-        damageFlashUntil = System.currentTimeMillis() + 520L;
+        damageFlashUntil = System.currentTimeMillis() + VisualFeatures.damageTintDuration();
     }
 
     public static void recordTotemPop() {
@@ -66,71 +59,60 @@ public final class VisualHud {
         while (!rightClicks.isEmpty() && now - rightClicks.peekFirst() > 1000L) rightClicks.removeFirst();
     }
 
-    private static void renderTrainerPanel(GuiGraphics g, Minecraft mc, int screenWidth) {
-        int panelW = 246;
-        int panelH = 96;
-        int panelX = screenWidth - panelW - 12;
-        int panelY = 52;
-        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xD910121D);
-        g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFFD7A85D);
-        g.fill(panelX, panelY, panelX + 2, panelY + panelH, VisualFeatures.accentColor());
-        g.drawString(mc.font, "ТРЕНЕР  /  ТЕКУЩИЙ КВЕСТ",
-                panelX + 10, panelY + 8, 0xFFFFD58A, false);
-        String quest = TrainingManager.getQuestTitle();
-        g.drawString(mc.font, fitLine(mc, quest, panelW - 20),
-                panelX + 10, panelY + 27, TEXT, false);
-        int barX = panelX + 10;
-        int barY = panelY + 47;
-        int barW = panelW - 20;
-        g.fill(barX, barY, barX + barW, barY + 7, 0xFF343545);
-        int fillW = (int) Math.round(barW * TrainingManager.getProgressRatio());
-        if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 7, 0xFF69D8A7);
-        g.drawString(mc.font, TrainingManager.getProgressLabel(), panelX + 10, panelY + 60,
-                TEXT, false);
-        String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
-                + "   КЕЙСЫ " + TrainingManager.getCaseCount();
-        g.drawString(mc.font, stats, panelX + 10, panelY + 78, MUTED, false);
+    private static HudWindowManager.Frame window(GuiGraphics g, String id, String title, int width,
+                                                  int contentHeight, int x, int y, int screenWidth,
+                                                  int screenHeight) {
+        return HudWindowManager.begin(g, id, title, screenWidth, screenHeight, width, contentHeight,
+                x, y, VisualFeatures.accentColor());
     }
 
-    private static String fitLine(Minecraft mc, String value, int maxWidth) {
+    private static void text(GuiGraphics g, String value, int x, int y, int color) {
+        g.drawString(Minecraft.getInstance().font, value, x, y, color, false);
+    }
+
+    private static String fit(Minecraft mc, String value, int maxWidth) {
         if (mc.font.width(value) <= maxWidth) return value;
-        String suffix = "...";
         String fitted = value;
-        while (!fitted.isEmpty() && mc.font.width(fitted + suffix) > maxWidth) {
+        while (!fitted.isEmpty() && mc.font.width(fitted + "...") > maxWidth) {
             fitted = fitted.substring(0, fitted.length() - 1);
         }
-        return fitted + suffix;
+        return fitted + "...";
     }
 
-    private static void line(GuiGraphics g, Minecraft mc, String value, int x, int y) {
-        int w = mc.font.width(value);
-        g.fill(x - 4, y - 3, x + w + 5, y + 10, PANEL);
-        g.fill(x - 4, y - 3, x - 2, y + 10, VisualFeatures.accentColor());
-        g.drawString(mc.font, value, x, y, TEXT, false);
+    private static void renderTrainerPanel(GuiGraphics g, Minecraft mc, int screenWidth, int screenHeight) {
+        HudWindowManager.Frame frame = window(g, "trainer", "ТРЕНЕР", 252, 96,
+                screenWidth - 264, 52, screenWidth, screenHeight);
+        if (frame == null) return;
+        text(g, fit(mc, TrainingManager.getQuestTitle(), frame.width()), frame.x(), frame.y(), TEXT);
+        int barY = frame.y() + 19;
+        g.fill(frame.x(), barY, frame.x() + frame.width(), barY + 7, 0xFF343545);
+        int fillW = (int) Math.round(frame.width() * TrainingManager.getProgressRatio());
+        if (fillW > 0) g.fill(frame.x(), barY, frame.x() + fillW, barY + 7, 0xFF69D8A7);
+        text(g, TrainingManager.getProgressLabel(), frame.x(), barY + 12, TEXT);
+        String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
+                + "   КЕЙСЫ " + TrainingManager.getCaseCount();
+        text(g, stats, frame.x(), barY + 28, MUTED);
     }
 
     private static void render(GuiGraphics g, net.minecraft.client.DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.options.hideGui || mc.player == null || mc.level == null) return;
 
+        long now = System.currentTimeMillis();
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
-        if (!enabled) {
-            if (VisualFeatures.isEnabled("Trainer")) renderTrainerPanel(g, mc, screenWidth);
-            return;
-        }
-
-        long now = System.currentTimeMillis();
 
         if (lastWorld != mc.level) {
             lastWorld = mc.level;
             totemPops = 0;
         }
+
         if (VisualFeatures.isEnabled("Damage Tint") && now < damageFlashUntil) {
-            float remaining = Math.max(0.0F, Math.min(1.0F, (float) (damageFlashUntil - now) / 520.0F));
+            float remaining = Math.max(0.0F, Math.min(1.0F,
+                    (float) (damageFlashUntil - now) / VisualFeatures.damageTintDuration()));
             for (int layer = 0; layer < 6; layer++) {
-                int alpha = Math.max(0, (int) (remaining * (54 - layer * 8)));
-                int tint = (alpha << 24) | 0x00F04444;
+                int alpha = Math.max(0, (int) (remaining * VisualFeatures.damageTintOpacity() * (54 - layer * 8)));
+                int tint = (alpha << 24) | (VisualFeatures.damageTintColor() & 0x00FFFFFF);
                 int inset = layer * 7;
                 int band = 7;
                 g.fill(0, inset, screenWidth, inset + band, tint);
@@ -143,121 +125,130 @@ public final class VisualHud {
             g.fill(0, 0, screenWidth, screenHeight, 0x0B9B7BFF);
         }
 
-        if (VisualFeatures.isEnabled("Trainer")) renderTrainerPanel(g, mc, screenWidth);
+        if (VisualFeatures.isEnabled("Trainer")) {
+            renderTrainerPanel(g, mc, screenWidth, screenHeight);
+        }
 
-        int x = 10;
-        int y = 10;
-
-        if (VisualFeatures.isEnabled("Watermark")) {
-            g.fill(x, y, x + 142, y + 40, PANEL);
-            g.fill(x, y, x + 2, y + 40, VisualFeatures.accentColor());
-            g.fill(x + 10, y + 9, x + 15, y + 14, VisualFeatures.accentColor());
-            g.drawString(mc.font, "PROJECT VISUAL", x + 21, y + 7, TEXT, false);
-            if (VisualFeatures.isEnabled("FPS Counter")) {
-                g.drawString(mc.font, "FPS  " + mc.getFps(), x + 10, y + 24, MUTED, false);
+        if (VisualFeatures.isEnabled("Watermark") || VisualFeatures.isEnabled("FPS Counter")
+                || VisualFeatures.isEnabled("Ping")) {
+            HudWindowManager.Frame frame = window(g, "watermark", "PROJECT VISUAL", 196, 46,
+                    10, 10, screenWidth, screenHeight);
+            if (frame != null) {
+                if (VisualFeatures.isEnabled("Watermark")) {
+                    text(g, "CLIENT  /  1.21.11", frame.x(), frame.y(), VisualFeatures.accentColor());
+                }
+                int y = frame.y() + 16;
+                if (VisualFeatures.isEnabled("FPS Counter")) {
+                    text(g, "FPS  " + mc.getFps(), frame.x(), y, TEXT);
+                    y += 14;
+                }
+                if (VisualFeatures.isEnabled("Ping") && mc.getConnection() != null) {
+                    var info = mc.getConnection().getPlayerInfo(mc.player.getUUID());
+                    if (info != null) text(g, "PING  " + info.getLatency() + " ms", frame.x(), y, MUTED);
+                }
             }
-            if (VisualFeatures.isEnabled("Ping")) {
-                var info = mc.getConnection() == null ? null : mc.getConnection().getPlayerInfo(mc.player.getUUID());
-                if (info != null) g.drawString(mc.font, "PING  " + info.getLatency() + " ms",
-                        x + 77, y + 24, VisualFeatures.accentColor(), false);
-            }
-        } else if (VisualFeatures.isEnabled("FPS Counter")) {
-            line(g, mc, "FPS  " + mc.getFps(), x, y);
         }
 
-        int yy = 56;
-        if (VisualFeatures.isEnabled("Keystrokes")) {
-            String keys = (mc.options.keyUp.isDown() ? "W " : "_ ")
-                    + (mc.options.keyLeft.isDown() ? "A " : "_ ")
-                    + (mc.options.keyDown.isDown() ? "S " : "_ ")
-                    + (mc.options.keyRight.isDown() ? "D" : "_");
-            line(g, mc, "KEYS  " + keys, x, yy);
-            yy += 17;
-            line(g, mc, "JUMP " + (mc.options.keyJump.isDown() ? "ON" : "OFF"), x, yy);
-            yy += 17;
+        if (VisualFeatures.isEnabled("Keystrokes") || VisualFeatures.isEnabled("CPS Counter")) {
+            HudWindowManager.Frame frame = window(g, "controls", "УПРАВЛЕНИЕ", 154, 52,
+                    10, 70, screenWidth, screenHeight);
+            if (frame != null) {
+                int y = frame.y();
+                if (VisualFeatures.isEnabled("Keystrokes")) {
+                    String keys = (mc.options.keyUp.isDown() ? "W " : "_ ")
+                            + (mc.options.keyLeft.isDown() ? "A " : "_ ")
+                            + (mc.options.keyDown.isDown() ? "S " : "_ ")
+                            + (mc.options.keyRight.isDown() ? "D" : "_");
+                    text(g, "KEYS  " + keys, frame.x(), y, TEXT);
+                    y += 16;
+                    text(g, "JUMP " + (mc.options.keyJump.isDown() ? "ON" : "OFF"), frame.x(), y, MUTED);
+                    y += 16;
+                }
+                if (VisualFeatures.isEnabled("CPS Counter")) {
+                    text(g, "CPS  L " + leftClicks.size() + "  R " + rightClicks.size(),
+                            frame.x(), y, VisualFeatures.accentColor());
+                }
+            }
         }
-        if (VisualFeatures.isEnabled("CPS Counter")) {
-            line(g, mc, "CPS  L " + leftClicks.size() + "  R " + rightClicks.size(), x, yy);
-            yy += 17;
+
+        if (VisualFeatures.isEnabled("Armor HUD") || VisualFeatures.isEnabled("Potion HUD")
+                || VisualFeatures.isEnabled("Totem Counter")) {
+            int potionCount = VisualFeatures.isEnabled("Potion HUD")
+                    ? Math.min(5, mc.player.getActiveEffects().size()) : 0;
+            int rows = (VisualFeatures.isEnabled("Armor HUD") ? 1 : 0)
+                    + potionCount + (VisualFeatures.isEnabled("Totem Counter") ? 1 : 0);
+            HudWindowManager.Frame frame = window(g, "player_stats", "СТАТУС ИГРОКА", 190,
+                    12 + rows * 15, 10, 132, screenWidth, screenHeight);
+            if (frame != null) {
+                int y = frame.y();
+                if (VisualFeatures.isEnabled("Armor HUD")) {
+                    StringBuilder armor = new StringBuilder("БРОНЯ  ");
+                    for (EquipmentSlot slot : new EquipmentSlot[]{
+                            EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+                        ItemStack stack = mc.player.getItemBySlot(slot);
+                        armor.append(stack.isEmpty() ? "-" : stack.getMaxDamage() - stack.getDamageValue()).append("  ");
+                    }
+                    text(g, fit(mc, armor.toString(), frame.width()), frame.x(), y, TEXT);
+                    y += 15;
+                }
+                if (VisualFeatures.isEnabled("Potion HUD")) {
+                    int count = 0;
+                    for (var effect : mc.player.getActiveEffects()) {
+                        if (count++ >= 5) break;
+                        String label = effect.getEffect().value().getDisplayName().getString()
+                                + "  " + (effect.getDuration() / 20) + "s";
+                        text(g, fit(mc, label, frame.width()), frame.x(), y, MUTED);
+                        y += 15;
+                    }
+                }
+                if (VisualFeatures.isEnabled("Totem Counter")) {
+                    int count = 0;
+                    for (ItemStack stack : mc.player.getInventory().getNonEquipmentItems()) {
+                        if (stack.is(Items.TOTEM_OF_UNDYING)) count += stack.getCount();
+                    }
+                    ItemStack offhandTotem = mc.player.getOffhandItem();
+                    if (offhandTotem.is(Items.TOTEM_OF_UNDYING)) count += offhandTotem.getCount();
+                    text(g, "TOTEMS  " + count + "   POPS  " + totemPops, frame.x(), y, MUTED);
+                }
+            }
         }
+
         if (VisualFeatures.isEnabled("Target HUD") || VisualFeatures.isEnabled("Target Info")) {
             var target = mc.hitResult instanceof net.minecraft.world.phys.EntityHitResult hit
                     ? hit.getEntity() : null;
             if (target != null && target.isAlive() && target != mc.player) {
-                int cardW = 158;
-                int cardH = 52;
-                int bx = screenWidth - cardW - 12;
-                int by = screenHeight - cardH - 14;
-                g.fill(bx, by, bx + cardW, by + cardH, PANEL);
-                g.fill(bx, by, bx + 2, by + cardH, VisualFeatures.accentColor());
-                String name = target.getName().getString();
-                while (mc.font.width(name) > cardW - 62 && name.length() > 5) {
-                    name = name.substring(0, name.length() - 4) + "...";
-                }
-                g.drawString(mc.font, name, bx + 9, by + 7, TEXT, false);
-                String distance = String.format(java.util.Locale.ROOT, "%.1fm", mc.player.distanceTo(target));
-                g.drawString(mc.font, distance, bx + cardW - mc.font.width(distance) - 8, by + 7, MUTED, false);
-                if (target instanceof net.minecraft.world.entity.LivingEntity living) {
-                    float maxHealth = Math.max(1.0F, living.getMaxHealth());
-                    float health = Math.max(0.0F, Math.min(maxHealth, living.getHealth()));
-                    String hp = String.format(java.util.Locale.ROOT, "%.1f / %.1f HP", health, maxHealth);
-                    g.drawString(mc.font, hp, bx + 9, by + 20, TEXT, false);
-                    int barX = bx + 9;
-                    int barY = by + 34;
-                    int barW = cardW - 18;
-                    g.fill(barX, barY, barX + barW, barY + 5, 0xFF393545);
-                    int fillW = Math.max(0, Math.min(barW, Math.round(barW * health / maxHealth)));
-                    if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 5, 0xFF57D99A);
-                    String armor = "ARMOR " + living.getArmorValue();
-                    g.drawString(mc.font, armor, bx + 9, by + 41, MUTED, false);
-                } else {
-                    g.drawString(mc.font, "ENTITY", bx + 9, by + 25, MUTED, false);
+                HudWindowManager.Frame frame = window(g, "target", "ЦЕЛЬ", 174, 61,
+                        screenWidth - 186, screenHeight - 88, screenWidth, screenHeight);
+                if (frame != null) {
+                    text(g, fit(mc, target.getName().getString(), frame.width()), frame.x(), frame.y(), TEXT);
+                    String distance = String.format(java.util.Locale.ROOT, "%.1fm", mc.player.distanceTo(target));
+                    text(g, distance, frame.x(), frame.y() + 15, MUTED);
+                    if (target instanceof net.minecraft.world.entity.LivingEntity living) {
+                        float maxHealth = Math.max(1.0F, living.getMaxHealth());
+                        float health = Math.max(0.0F, Math.min(maxHealth, living.getHealth()));
+                        text(g, String.format(java.util.Locale.ROOT, "%.1f / %.1f HP", health, maxHealth),
+                                frame.x(), frame.y() + 29, TEXT);
+                        int barY = frame.y() + 46;
+                        g.fill(frame.x(), barY, frame.x() + frame.width(), barY + 6, 0xFF393545);
+                        int fillW = Math.max(0, Math.min(frame.width(), Math.round(frame.width() * health / maxHealth)));
+                        if (fillW > 0) g.fill(frame.x(), barY, frame.x() + fillW, barY + 6, 0xFF57D99A);
+                    }
                 }
             }
-        }
-        if (VisualFeatures.isEnabled("Armor HUD")) {
-            StringBuilder armor = new StringBuilder("ARMOR  ");
-            for (net.minecraft.world.entity.EquipmentSlot slot : new net.minecraft.world.entity.EquipmentSlot[]{
-                    net.minecraft.world.entity.EquipmentSlot.HEAD, net.minecraft.world.entity.EquipmentSlot.CHEST,
-                    net.minecraft.world.entity.EquipmentSlot.LEGS, net.minecraft.world.entity.EquipmentSlot.FEET}) {
-                ItemStack stack = mc.player.getItemBySlot(slot);
-                armor.append(stack.isEmpty() ? "-" : stack.getMaxDamage() - stack.getDamageValue()).append("  ");
-            }
-            line(g, mc, armor.toString(), x, yy);
-            yy += 17;
-        }
-        if (VisualFeatures.isEnabled("Potion HUD")) {
-            int count = 0;
-            for (var effect : mc.player.getActiveEffects()) {
-                if (count++ >= 5) break;
-                line(g, mc, effect.getEffect().value().getDisplayName().getString()
-                        + "  " + (effect.getDuration() / 20) + "s", x, yy);
-                yy += 15;
-            }
-        }
-        if (VisualFeatures.isEnabled("Totem Counter")) {
-            int count = 0;
-            for (ItemStack stack : mc.player.getInventory().getNonEquipmentItems()) {
-                if (stack.is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING)) count += stack.getCount();
-            }
-            ItemStack offhandTotem = mc.player.getOffhandItem();
-            if (offhandTotem.is(net.minecraft.world.item.Items.TOTEM_OF_UNDYING)) {
-                count += offhandTotem.getCount();
-            }
-            line(g, mc, "TOTEMS  " + count + "   POPS  " + totemPops, x, yy);
         }
 
         if (VisualFeatures.isEnabled("Array List") || VisualFeatures.isEnabled("Module List")) {
-            int ry = 10;
-            for (Map.Entry<String, Boolean> entry : VisualFeatures.getStates().entrySet()) {
-                if (entry.getValue() && !entry.getKey().equals("Watermark")
-                        && !entry.getKey().equals("Array List") && !entry.getKey().equals("Module List")) {
-                    int w = mc.font.width(entry.getKey());
-                    int rx = screenWidth - w - 14;
-                    g.fill(rx - 4, ry - 2, rx + w + 5, ry + 11, PANEL);
-                    g.fill(rx + w + 3, ry - 2, rx + w + 5, ry + 11, VisualFeatures.accentColor());
-                    g.drawString(mc.font, entry.getKey(), rx, ry, TEXT, false);
-                    ry += 14;
+            HudWindowManager.Frame frame = window(g, "arraylist", "АКТИВНЫЕ МОДУЛИ", 184, 146,
+                    screenWidth - 196, 164, screenWidth, screenHeight);
+            if (frame != null) {
+                int y = frame.y();
+                for (Map.Entry<String, Boolean> entry : VisualFeatures.getStates().entrySet()) {
+                    if (entry.getValue() && !entry.getKey().equals("Watermark")
+                            && !entry.getKey().equals("Array List") && !entry.getKey().equals("Module List")) {
+                        text(g, fit(mc, entry.getKey(), frame.width()), frame.x(), y, TEXT);
+                        y += 13;
+                        if (y > frame.y() + frame.height() - 10) break;
+                    }
                 }
             }
         }
@@ -283,14 +274,17 @@ public final class VisualHud {
             while (!notifications.isEmpty() && notifications.peekFirst().expiresAt() < now) {
                 notifications.removeFirst();
             }
-            int ny = 12;
-            for (Notification notification : notifications) {
-                int width = mc.font.width(notification.text()) + 18;
-                int nx = screenWidth - width - 12;
-                g.fill(nx, ny, nx + width, ny + 20, PANEL);
-                g.fill(nx, ny, nx + 2, ny + 20, VisualFeatures.accentColor());
-                g.drawString(mc.font, notification.text(), nx + 8, ny + 6, TEXT, false);
-                ny += 24;
+            if (!notifications.isEmpty()) {
+                int height = 8 + notifications.size() * 15;
+                HudWindowManager.Frame frame = window(g, "notifications", "УВЕДОМЛЕНИЯ", 210, height,
+                        screenWidth - 222, 10, screenWidth, screenHeight);
+                if (frame != null) {
+                    int y = frame.y();
+                    for (Notification notification : notifications) {
+                        text(g, fit(mc, notification.text(), frame.width()), frame.x(), y, TEXT);
+                        y += 15;
+                    }
+                }
             }
         }
     }
