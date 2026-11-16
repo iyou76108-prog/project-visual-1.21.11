@@ -703,11 +703,14 @@ public final class ChessWorldGame {
         boolean interworlderMask = VisualFeatures.isEnabled("Interworlder Mask") && thirdPerson && alive;
         boolean dualBlades = VisualFeatures.isEnabled("Dual Blades") && thirdPerson && alive;
         boolean flyingSpellbook = VisualFeatures.isEnabled("Flying Spellbook") && thirdPerson && alive;
+        boolean handCosmetics = VisualFeatures.isEnabled("Hand Cosmetics") && thirdPerson && alive;
+        boolean capeEffects = VisualFeatures.isEnabled("Cape Effects") && thirdPerson && alive;
         boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
         boolean axeScene = afkSceneType == 2 && afkSceneTick >= 0;
         boolean watcherScene = afkSceneType == 3 && afkSceneTick >= 0;
         if (!queenSkin && !invokerSkin && !gutsSkin && !akashiSkin && !interworlderMask
-                && !dualBlades && !flyingSpellbook && !magnusScene && !axeScene && !watcherScene) return;
+                && !dualBlades && !flyingSpellbook && !handCosmetics && !capeEffects
+                && !magnusScene && !axeScene && !watcherScene) return;
 
         VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
 
@@ -718,6 +721,8 @@ public final class ChessWorldGame {
 
         // Invoker takes priority if both persisted toggles were enabled before this version.
         long gameTime = client.level.getGameTime();
+        if (handCosmetics) renderHandCosmetics(out, new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D), gameTime);
+        if (capeEffects) renderCapeEffect(out, new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D), gameTime);
         if (invokerSkin) {
             BoardTransform invokerTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
             renderInvoker(out, invokerTransform, gameTime);
@@ -798,6 +803,39 @@ public final class ChessWorldGame {
                         0.06D + pull * 0.58D, 0xFF080610, 32);
             }
         }
+    }
+
+    private static void renderHandCosmetics(VertexConsumer out, BoardTransform t, long gameTime) {
+        // Original wrist cuffs and small rune stones, attached to both forearms.
+        int pulse = ((gameTime / 8L) & 1L) == 0L ? 0xFFFFD77A : 0xFFB88BFF;
+        for (int side : new int[]{-1, 1}) {
+            double x = side * 0.355D;
+            cylinder(out, t, x, 0.145D, 0.795D, 0.865D, 0.082D, 0xFF8A6538, 16);
+            cylinder(out, t, x, 0.145D, 0.805D, 0.855D, 0.086D, 0xFFD9B66E, 16);
+            cylinder(out, t, x, 0.145D, 0.825D, 0.842D, 0.089D, 0xFF6F4F8F, 16);
+            sphere(out, t, x, 0.84D, 0.233D, 0.035D, pulse, 10, 7);
+            box(out, t, x - 0.024D, 0.73D, 0.12D, x + 0.024D, 0.78D, 0.19D, 0xFF39303F);
+        }
+    }
+
+    private static void renderCapeEffect(VertexConsumer out, BoardTransform t, long gameTime) {
+        // Segmented animated back-cape with a dark fabric base and luminous violet seams.
+        box(out, t, -0.29D, 1.26D, -0.19D, 0.29D, 1.39D, -0.10D, 0xFF33254C);
+        for (int panel = 0; panel < 7; panel++) {
+            double x0 = -0.30D + panel * 0.086D;
+            double x1 = x0 + 0.084D;
+            double wave = Math.sin(gameTime * 0.075D + panel * 0.72D) * 0.045D;
+            double bottomZ = -0.25D + wave;
+            int fabric = (panel & 1) == 0 ? 0xFF241D39 : 0xFF302447;
+            box(out, t, x0, 0.18D + Math.abs(wave) * 0.2D, bottomZ - 0.055D,
+                    x1, 1.31D, -0.145D, fabric);
+            box(out, t, x0 + 0.035D, 0.23D, bottomZ - 0.060D,
+                    x0 + 0.048D, 1.27D, -0.198D, 0xFF7751B4);
+            sphere(out, t, (x0 + x1) * 0.5D, 0.21D + Math.abs(wave) * 0.2D,
+                    bottomZ - 0.063D, 0.022D, 0xFFB68CFF, 8, 5);
+        }
+        box(out, t, -0.24D, 1.27D, -0.205D, 0.24D, 1.34D, -0.16D, 0xFFD7B36D);
+        sphere(out, t, 0.0D, 1.29D, -0.13D, 0.075D, 0xFF9E6CE4, 12, 8);
     }
 
     private static void renderInterworlderMask(VertexConsumer out, BoardTransform t) {
