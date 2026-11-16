@@ -68,13 +68,13 @@ public final class VisualHud {
 
     private static void renderTrainerPanel(GuiGraphics g, Minecraft mc, int screenWidth) {
         int panelW = 246;
-        int panelH = 88;
+        int panelH = 96;
         int panelX = screenWidth - panelW - 12;
         int panelY = 52;
         g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xD910121D);
         g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFFD7A85D);
         g.fill(panelX, panelY, panelX + 2, panelY + panelH, VisualFeatures.accentColor());
-        g.drawString(mc.font, "ТРЕНЕР  /  ЕЖЕДНЕВНОЕ ЗАДАНИЕ",
+        g.drawString(mc.font, "ТРЕНЕР  /  ТЕКУЩИЙ КВЕСТ",
                 panelX + 10, panelY + 8, 0xFFFFD58A, false);
         String quest = TrainingManager.getQuestTitle();
         g.drawString(mc.font, fitLine(mc, quest, panelW - 20),
@@ -85,9 +85,11 @@ public final class VisualHud {
         g.fill(barX, barY, barX + barW, barY + 7, 0xFF343545);
         int fillW = (int) Math.round(barW * TrainingManager.getProgressRatio());
         if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 7, 0xFF69D8A7);
+        g.drawString(mc.font, TrainingManager.getProgressLabel(), panelX + 10, panelY + 60,
+                TEXT, false);
         String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
                 + "   КЕЙСЫ " + TrainingManager.getCaseCount();
-        g.drawString(mc.font, stats, panelX + 10, panelY + 64, MUTED, false);
+        g.drawString(mc.font, stats, panelX + 10, panelY + 78, MUTED, false);
     }
 
     private static String fitLine(Minecraft mc, String value, int maxWidth) {
