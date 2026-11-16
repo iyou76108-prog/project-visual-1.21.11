@@ -7,6 +7,14 @@ public final class VisualFeatures {
     private static final Map<String, Boolean> STATES = new LinkedHashMap<>();
     private static int customAccentColor = 0xFF54D6C8;
     private static double hitboxExpansion = 0.5D;
+    private static float hitboxVisualWidth = 2.0F;
+    private static int hitParticleStyle;
+    private static int hitParticleCount = 7;
+    private static int damageTintColor = 0x00F04444;
+    private static int damageTintDuration = 520;
+    private static float damageTintOpacity = 1.0F;
+    private static int swingStyle = 1;
+    private static float swingStrength = 1.0F;
 
     static {
         String[] modules = {
@@ -74,6 +82,73 @@ public final class VisualFeatures {
 
     public static void setHitboxExpansion(double value) {
         hitboxExpansion = Math.max(0.05D, Math.min(2.0D, value));
+    }
+
+    public static float hitboxVisualWidth() {
+        return hitboxVisualWidth;
+    }
+
+    public static void setHitboxVisualWidth(float value) {
+        hitboxVisualWidth = Math.max(0.5F, Math.min(5.0F, value));
+    }
+
+    public static int hitParticleStyle() {
+        return hitParticleStyle;
+    }
+
+    public static void cycleHitParticleStyle() {
+        hitParticleStyle = (hitParticleStyle + 1) % 5;
+    }
+
+    public static int hitParticleCount() {
+        return hitParticleCount;
+    }
+
+    public static void setHitParticleCount(int value) {
+        hitParticleCount = Math.max(2, Math.min(24, value));
+    }
+
+    public static int damageTintColor() {
+        return damageTintColor;
+    }
+
+    public static void cycleDamageTintColor() {
+        int[] palette = {0x00F04444, 0x009B7BFF, 0x003CCFCF, 0x00FFB347};
+        int current = 0;
+        for (int i = 0; i < palette.length; i++) if (palette[i] == damageTintColor) current = i;
+        damageTintColor = palette[(current + 1) % palette.length];
+    }
+
+    public static int damageTintDuration() {
+        return damageTintDuration;
+    }
+
+    public static void setDamageTintDuration(int value) {
+        damageTintDuration = Math.max(150, Math.min(1500, value));
+    }
+
+    public static float damageTintOpacity() {
+        return damageTintOpacity;
+    }
+
+    public static void setDamageTintOpacity(float value) {
+        damageTintOpacity = Math.max(0.1F, Math.min(1.0F, value));
+    }
+
+    public static int swingStyle() {
+        return swingStyle;
+    }
+
+    public static void cycleSwingStyle() {
+        swingStyle = (swingStyle + 1) % 4;
+    }
+
+    public static float swingStrength() {
+        return swingStrength;
+    }
+
+    public static void setSwingStrength(float value) {
+        swingStrength = Math.max(0.2F, Math.min(2.0F, value));
     }
 
     public static boolean isPlayerEsp() {
