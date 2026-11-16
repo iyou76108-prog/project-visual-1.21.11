@@ -69,7 +69,7 @@ public final class TrainingManager {
             return;
         }
         // The server hurt event confirms the hit; health synchronization can arrive a few ticks later.
-        float currentHealth = trackedTarget.getHealth();
+        float currentHealth = trackedTarget.getHealth() + trackedTarget.getAbsorptionAmount();
         double dealt = targetHealth - currentHealth;
         if (dealt > 0.001D) {
             recordDamage(dealt, trackedAttackWasMace);
@@ -97,7 +97,7 @@ public final class TrainingManager {
         }
 
         trackedTarget = victim;
-        targetHealth = victim.getHealth();
+        targetHealth = victim.getHealth() + victim.getAbsorptionAmount();
         trackedAttackWasMace = attacker.getMainHandItem().is(Items.MACE)
                 || attacker.getOffhandItem().is(Items.MACE);
         trackedAttackTicks = 40;
