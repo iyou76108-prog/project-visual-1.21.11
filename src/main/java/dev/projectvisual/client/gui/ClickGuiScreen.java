@@ -225,6 +225,10 @@ public final class ClickGuiScreen extends Screen {
                 int cx=mainX+col*(cardW+12),cy=y+74+row*58;
                 if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
                     String module=names[n];
+                    if(module.equals("Skin")){
+                        Minecraft.getInstance().setScreen(new SkinManagerScreen());
+                        return true;
+                    }
                     VisualFeatures.toggle(module);
                     VisualHud.notifyToggle(module, VisualFeatures.isEnabled(module));
                     if(module.equals("FPS Counter")) VisualHud.setEnabled(VisualFeatures.isEnabled(module));
