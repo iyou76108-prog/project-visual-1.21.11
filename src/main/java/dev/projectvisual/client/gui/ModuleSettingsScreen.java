@@ -40,13 +40,15 @@ public final class ModuleSettingsScreen extends Screen {
                         VisualFeatures.damageTintOpacity() * 100.0F), RowType.TINT_OPACITY));
             }
             case "Hitboxes" -> {
-                rows.add(new Row("Размер расширения", String.format(java.util.Locale.ROOT, "%.2f",
+                rows.add(new Row("Радиус захвата игроков", String.format(java.util.Locale.ROOT, "%.2f",
                         VisualFeatures.hitboxExpansion()), RowType.HITBOX_EXPANSION));
-                rows.add(new Row("Сброс размера", "0.50", RowType.HITBOX_RESET));
+                rows.add(new Row("Дистанция ESP", VisualFeatures.espDistance() + " блоков", RowType.ESP_DISTANCE));
+                rows.add(new Row("Сброс радиуса", "0.50", RowType.HITBOX_RESET));
             }
             case "Hitbox Visual" -> {
                 rows.add(new Row("Толщина контура", String.format(java.util.Locale.ROOT, "%.1f px",
                         VisualFeatures.hitboxVisualWidth()), RowType.HITBOX_WIDTH));
+                rows.add(new Row("Дистанция контура", VisualFeatures.espDistance() + " блоков", RowType.ESP_DISTANCE));
                 rows.add(new Row("Сброс толщины", "2.0 px", RowType.HITBOX_WIDTH_RESET));
             }
             case "Swing Animation" -> {
@@ -57,6 +59,26 @@ public final class ModuleSettingsScreen extends Screen {
             case "Perspective" -> rows.add(new Row("Ракурс камеры",
                     VisualFeatures.perspectiveMode() == 0 ? "От третьего лица — сзади" : "От третьего лица — спереди",
                     RowType.PERSPECTIVE_MODE));
+            case "Zoom" -> rows.add(new Row("Сила приближения",
+                    String.format(java.util.Locale.ROOT, "%.0f%%", VisualFeatures.zoomScale() * 100.0F),
+                    RowType.ZOOM_SCALE));
+            case "Player ESP", "Name Tags", "Player Trails" ->
+                    rows.add(new Row("Дистанция отображения", VisualFeatures.espDistance() + " блоков",
+                            RowType.ESP_DISTANCE));
+            case "Chest ESP" ->
+                    rows.add(new Row("Радиус поиска сундуков", VisualFeatures.chestEspRadius() + " блоков",
+                            RowType.CHEST_RADIUS));
+            case "China Hat" ->
+                    rows.add(new Row("Размер шляпы", String.format(java.util.Locale.ROOT, "%.0f%%",
+                            VisualFeatures.chinaHatSize() * 100.0F), RowType.CHINA_HAT_SIZE));
+            case "View Model" ->
+                    rows.add(new Row("Масштаб руки", String.format(java.util.Locale.ROOT, "%.0f%%",
+                            VisualFeatures.viewModelScale() * 100.0F), RowType.VIEWMODEL_SCALE));
+            case "Crosshair" -> {
+                rows.add(new Row("Стиль прицела", crosshairStyleName(), RowType.CROSSHAIR_STYLE));
+                rows.add(new Row("Размер прицела", String.format(java.util.Locale.ROOT, "%.0f%%",
+                        VisualFeatures.crosshairSize() * 100.0F), RowType.CROSSHAIR_SIZE));
+            }
             case "Camera Clip" -> rows.add(new Row("Коллизия камеры", "Камера проходит через блоки", RowType.INFO));
             case "Trainer" -> rows.add(new Row("Окно тренера", HudWindowManager.isVisible("trainer")
                     ? "Показывается" : "Скрыто", RowType.TRAINER_WINDOW));
@@ -112,6 +134,30 @@ public final class ModuleSettingsScreen extends Screen {
         };
     }
 
+    private String crosshairStyleName() {
+        return switch (VisualFeatures.crosshairStyle()) {
+            case 0 -> "Классический крест";
+            case 1 -> "Диагональный";
+            default -> "Точка";
+        };
+    }
+
+    private String helperText() {
+        return switch (module) {
+            case "Swing Animation" -> switch (VisualFeatures.swingStyle()) {
+                case 0 -> "Classic: короткий диагональный замах в запястье.";
+                case 1 -> "Arc: широкое движение по дуге.";
+                case 2 -> "Spin: более сильный вращательный удар.";
+                default -> "Snap: резкий быстрый рывок в начале замаха.";
+            };
+            case "Hitboxes" -> "Меняет клиентский радиус выбора игрока, не серверную дальность удара.";
+            case "Camera Clip" -> "Вид от третьего лица проходит сквозь блоки; серверная коллизия не меняется.";
+            case "Perspective" -> "Фиксирует камеру от третьего лица и возвращает прежний режим при выключении.";
+            case "Hit Particles" -> "Выбери вид частиц и количество при подтверждённом попадании.";
+            default -> "Настройки применяются сразу и сохраняются в config.";
+        };
+    }
+
     @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
         g.fill(0, 0, width, height, 0xB9000000);
@@ -124,8 +170,9 @@ public final class ModuleSettingsScreen extends Screen {
         g.fill(px, py, px + panelW, py + 3, VisualFeatures.accentColor());
         g.drawString(font, "НАСТРОЙКИ МОДУЛЯ", px + 20, py + 18, MUTED, false);
         g.drawString(font, module, px + 20, py + 38, TEXT, false);
-        g.drawString(font, "ЛКМ в меню — включить/выключить. ПКМ — открыть эти настройки.",
+        g.drawString(font, "ЛКМ — включить/выключить. ПКМ — настройки модуля.",
                 px + 20, py + 58, MUTED, false);
+        g.drawString(font, helperText(), px + 20, py + 74, MUTED, false);
 
         List<Row> rows = rows();
         for (int i = 0; i < rows.size(); i++) {
@@ -156,7 +203,10 @@ public final class ModuleSettingsScreen extends Screen {
     private boolean isSlider(RowType type) {
         return type == RowType.PARTICLE_COUNT || type == RowType.TINT_DURATION
                 || type == RowType.TINT_OPACITY || type == RowType.HITBOX_EXPANSION
-                || type == RowType.HITBOX_WIDTH || type == RowType.SWING_STRENGTH;
+                || type == RowType.HITBOX_WIDTH || type == RowType.SWING_STRENGTH
+                || type == RowType.ZOOM_SCALE || type == RowType.ESP_DISTANCE
+                || type == RowType.CHEST_RADIUS || type == RowType.CHINA_HAT_SIZE
+                || type == RowType.VIEWMODEL_SCALE || type == RowType.CROSSHAIR_SIZE;
     }
 
     private float sliderRatio(RowType type) {
@@ -167,6 +217,12 @@ public final class ModuleSettingsScreen extends Screen {
             case HITBOX_EXPANSION -> (float) ((VisualFeatures.hitboxExpansion() - 0.05D) / 1.95D);
             case HITBOX_WIDTH -> (VisualFeatures.hitboxVisualWidth() - 0.5F) / 4.5F;
             case SWING_STRENGTH -> (VisualFeatures.swingStrength() - 0.2F) / 1.8F;
+            case ZOOM_SCALE -> (VisualFeatures.zoomScale() - 0.1F) / 0.65F;
+            case ESP_DISTANCE -> (VisualFeatures.espDistance() - 8) / 120.0F;
+            case CHEST_RADIUS -> (VisualFeatures.chestEspRadius() - 8) / 40.0F;
+            case CHINA_HAT_SIZE -> (VisualFeatures.chinaHatSize() - 0.5F) / 1.25F;
+            case VIEWMODEL_SCALE -> (VisualFeatures.viewModelScale() - 0.5F) / 1.0F;
+            case CROSSHAIR_SIZE -> (VisualFeatures.crosshairSize() - 0.5F) / 1.5F;
             default -> 0.0F;
         };
     }
@@ -180,6 +236,12 @@ public final class ModuleSettingsScreen extends Screen {
             case HITBOX_EXPANSION -> VisualFeatures.setHitboxExpansion(0.05D + value * 1.95D);
             case HITBOX_WIDTH -> VisualFeatures.setHitboxVisualWidth(0.5F + value * 4.5F);
             case SWING_STRENGTH -> VisualFeatures.setSwingStrength(0.2F + value * 1.8F);
+            case ZOOM_SCALE -> VisualFeatures.setZoomScale(0.1F + value * 0.65F);
+            case ESP_DISTANCE -> VisualFeatures.setEspDistance(Math.round(8 + value * 120));
+            case CHEST_RADIUS -> VisualFeatures.setChestEspRadius(Math.round(8 + value * 40));
+            case CHINA_HAT_SIZE -> VisualFeatures.setChinaHatSize(0.5F + value * 1.25F);
+            case VIEWMODEL_SCALE -> VisualFeatures.setViewModelScale(0.5F + value);
+            case CROSSHAIR_SIZE -> VisualFeatures.setCrosshairSize(0.5F + value * 1.5F);
             default -> { }
         }
     }
@@ -192,6 +254,7 @@ public final class ModuleSettingsScreen extends Screen {
             case HITBOX_WIDTH_RESET -> VisualFeatures.setHitboxVisualWidth(2.0F);
             case SWING_STYLE -> VisualFeatures.cycleSwingStyle();
             case PERSPECTIVE_MODE -> VisualFeatures.cyclePerspectiveMode();
+            case CROSSHAIR_STYLE -> VisualFeatures.cycleCrosshairStyle();
             case TRAINER_WINDOW -> HudWindowManager.setVisible("trainer", !HudWindowManager.isVisible("trainer"));
             case WATERMARK_WINDOW -> HudWindowManager.setVisible("watermark", !HudWindowManager.isVisible("watermark"));
             case CONTROLS_WINDOW -> HudWindowManager.setVisible("controls", !HudWindowManager.isVisible("controls"));
@@ -236,7 +299,9 @@ public final class ModuleSettingsScreen extends Screen {
     private enum RowType {
         CYCLE, PARTICLE_COUNT, TINT_COLOR, TINT_DURATION, TINT_OPACITY,
         HITBOX_EXPANSION, HITBOX_RESET, HITBOX_WIDTH, HITBOX_WIDTH_RESET,
-        SWING_STYLE, SWING_STRENGTH, PERSPECTIVE_MODE, TRAINER_WINDOW, WATERMARK_WINDOW,
+        SWING_STYLE, SWING_STRENGTH, PERSPECTIVE_MODE, CROSSHAIR_STYLE,
+        ZOOM_SCALE, ESP_DISTANCE, CHEST_RADIUS, CHINA_HAT_SIZE, VIEWMODEL_SCALE, CROSSHAIR_SIZE,
+        TRAINER_WINDOW, WATERMARK_WINDOW,
         CONTROLS_WINDOW, PLAYER_STATS_WINDOW, TARGET_WINDOW, ARRAY_WINDOW,
         NOTIFICATIONS_WINDOW, INFO
     }
