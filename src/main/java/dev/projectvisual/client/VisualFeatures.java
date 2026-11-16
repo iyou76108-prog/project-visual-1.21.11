@@ -17,7 +17,7 @@ public final class VisualFeatures {
             "Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation",
             "View Model","Camera Clip","Zoom","Smooth Camera","Perspective",
             "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual",
-            "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Interworlder Mask","Watcher AFK","Hitboxes","Chest ESP"
+            "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Interworlder Mask","Watcher AFK",\n            "Trainer","Guts","Akashi Seijuro","Dual Blades","Flying Spellbook","Hitboxes","Chest ESP"
         };
         for (String module : modules) STATES.put(module, false);
         STATES.put("FPS Counter", true);
@@ -40,6 +40,12 @@ public final class VisualFeatures {
         if (enabled && module.equals("Queen Skin")) setEnabled("Invoker Skin", false);
         if (enabled && module.equals("Invoker Skin")) setEnabled("Queen Skin", false);
         setEnabled(module, enabled);
+    }
+
+    private static boolean isBodySkin(String module) {
+        return module.equals("Queen Skin") || module.equals("Invoker Skin") || module.equals("Guts")
+                || module.equals("Akashi Seijuro") || module.equals("Dual Blades")
+                || module.equals("Flying Spellbook");
     }
 
     public static Map<String, Boolean> getStates() {
