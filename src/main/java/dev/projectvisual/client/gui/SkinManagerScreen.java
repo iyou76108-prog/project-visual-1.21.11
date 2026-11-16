@@ -9,7 +9,6 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
 import net.minecraft.network.chat.Component;
 
-import java.util.concurrent.ThreadLocalRandom;
 
 public final class SkinManagerScreen extends Screen {
     private static final int BG = 0xF00D0F18;
@@ -117,20 +116,26 @@ public final class SkinManagerScreen extends Screen {
             g.drawCenteredString(font, finished ? "НАГРАДА" : "ОТКРЫТИЕ КЕЙСА",
                     px + panelW / 2, overlayTop - 5, 0xFFFFD58A);
 
-            String shown;
-            if (finished) {
-                shown = TrainingManager.getSkinDisplayName(caseReward);
-            } else {
-                int index = (int) ((elapsed / Math.max(55L, 270L + Math.max(0L, elapsed - 2400L) / 5L))
-                        % SKINS.length);
-                if (elapsed > 3500L) {
-                    shown = TrainingManager.getSkinDisplayName(caseReward);
-                } else {
-                    shown = SKINS[index].title();
-                }
+            int index = (int) ((elapsed / Math.max(55L, 230L + Math.max(0L, elapsed - 2200L) / 4L))
+                    % SKINS.length);
+            int tileW = Math.min(122, (panelW - 92) / 5);
+            int tileGap = 8;
+            int stripW = tileW * 5 + tileGap * 4;
+            int stripX = px + (panelW - stripW) / 2;
+            int stripY = overlayTop + 19;
+            for (int slot = 0; slot < 5; slot++) {
+                int skinIndex = Math.floorMod(index + slot - 2, SKINS.length);
+                String label = finished && slot == 2
+                        ? TrainingManager.getSkinDisplayName(caseReward) : SKINS[skinIndex].title();
+                int tileX = stripX + slot * (tileW + tileGap);
+                boolean selected = slot == 2;
+                int tileColor = selected ? (finished ? 0xFF264C40 : 0xFF3F3568) : 0xFF202333;
+                g.fill(tileX, stripY, tileX + tileW, stripY + 31, tileColor);
+                g.fill(tileX, stripY, tileX + tileW, stripY + 2,
+                        selected ? (finished ? 0xFF85E8B0 : 0xFFB89AFF) : 0xFF45495A);
+                g.drawCenteredString(font, fitLabel(label, tileW - 8),
+                        tileX + tileW / 2, stripY + 11, selected ? TEXT : MUTED);
             }
-            g.drawCenteredString(font, shown, px + panelW / 2, overlayTop + 22,
-                    finished ? 0xFF85E8B0 : TEXT);
         } else if (lastReward != null && System.currentTimeMillis() - lastRewardAt < 5500L) {
             g.drawString(font, "Последний выигрыш: " + TrainingManager.getSkinDisplayName(lastReward),
                     px + 34, caseY + 51, 0xFF85E8B0, false);
@@ -140,6 +145,15 @@ public final class SkinManagerScreen extends Screen {
                 px + 20, py + panelH - 16, MUTED, false);
         g.drawString(font, "ESC — назад", px + panelW - 94, py + panelH - 16, MUTED, false);
         super.render(g, mouseX, mouseY, partialTick);
+    }
+
+    private String fitLabel(String value, int maxWidth) {
+        if (font.width(value) <= maxWidth) return value;
+        String fitted = value;
+        while (!fitted.isEmpty() && font.width(fitted + "...") > maxWidth) {
+            fitted = fitted.substring(0, fitted.length() - 1);
+        }
+        return fitted + "...";
     }
 
     private void beginCaseOpening() {
