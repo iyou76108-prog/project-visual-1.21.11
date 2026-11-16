@@ -222,31 +222,57 @@ public final class LockpickScreen extends Screen {
     }
 
     private void drawWatcher(GuiGraphics g, int cx, int top) {
-        // Pixel-art Watcher: featureless dark face, white eyes, long coat and pale hood trim.
-        g.fill(cx - 66, top + 64, cx + 66, top + 205, 0xFF090B13);
-        g.fill(cx - 82, top + 92, cx - 45, top + 205, 0xFF171827);
-        g.fill(cx + 45, top + 92, cx + 82, top + 205, 0xFF171827);
-        g.fill(cx - 80, top + 94, cx - 62, top + 180, 0xFFB8BBC8);
-        g.fill(cx + 62, top + 94, cx + 80, top + 180, 0xFFB8BBC8);
-        g.fill(cx - 57, top + 21, cx + 57, top + 122, 0xFF171827);
-        g.fill(cx - 47, top + 28, cx + 47, top + 115, 0xFF04050A);
-        g.fill(cx - 66, top + 39, cx - 42, top + 104, 0xFF171827);
-        g.fill(cx + 42, top + 39, cx + 66, top + 104, 0xFF171827);
-        // Fur edging around the hood.
-        for (int i = 0; i < 7; i++) {
-            int y = top + 35 + i * 11;
-            g.fill(cx - 63, y, cx - 48, y + 7, 0xFFD9D8E1);
-            g.fill(cx + 48, y, cx + 63, y + 7, 0xFFD9D8E1);
+        // Cleaner portrait: layered hood silhouette, readable eyes, bridge and shadowed lower mask.
+        // Rear cloak and shoulders.
+        g.fill(cx - 74, top + 92, cx + 74, top + 207, 0xFF070911);
+        g.fill(cx - 94, top + 116, cx - 48, top + 207, 0xFF131725);
+        g.fill(cx + 48, top + 116, cx + 94, top + 207, 0xFF131725);
+        g.fill(cx - 89, top + 134, cx - 75, top + 190, 0xFFB9BAC8);
+        g.fill(cx + 75, top + 134, cx + 89, top + 190, 0xFFB9BAC8);
+        g.fill(cx - 62, top + 27, cx + 62, top + 135, 0xFF1A1E2D);
+        g.fill(cx - 53, top + 34, cx + 53, top + 123, 0xFF090B13);
+        g.fill(cx - 70, top + 49, cx - 48, top + 113, 0xFF262A39);
+        g.fill(cx + 48, top + 49, cx + 70, top + 113, 0xFF262A39);
+
+        // Deep hood opening with a soft violet inner shadow.
+        g.fill(cx - 41, top + 47, cx + 41, top + 121, 0xFF020309);
+        g.fill(cx - 34, top + 56, cx + 34, top + 116, 0xFF080613);
+        g.fill(cx - 29, top + 58, cx + 29, top + 112, 0xFF0D0B1D);
+
+        // Fur trim follows the hood arch rather than forming two square columns.
+        for (int i = 0; i < 9; i++) {
+            int y = top + 39 + i * 8;
+            int inset = i * 2;
+            g.fill(cx - 65 + inset, y, cx - 51 + inset, y + 6, 0xFFD7D6E0);
+            g.fill(cx + 51 - inset, y, cx + 65 - inset, y + 6, 0xFFD7D6E0);
         }
-        g.fill(cx - 29, top + 70, cx - 8, top + 78, 0xFFF9F8FF);
-        g.fill(cx + 8, top + 70, cx + 29, top + 78, 0xFFF9F8FF);
-        g.fill(cx - 27, top + 72, cx - 10, top + 76, 0xFFFFFFFF);
-        g.fill(cx + 10, top + 72, cx + 27, top + 76, 0xFFFFFFFF);
-        g.fill(cx - 22, top + 123, cx + 22, top + 131, 0xFFB9B7C8);
-        g.fill(cx - 5, top + 139, cx + 5, top + 154, 0xFFD8D9E3);
-        g.fill(cx - 3, top + 161, cx + 3, top + 176, 0xFFD8D9E3);
-        g.fill(cx - 3, top + 184, cx + 3, top + 198, 0xFFD8D9E3);
-        g.fill(cx - 90, top + 205, cx + 90, top + 214, 0xFF0A0C15);
+        g.fill(cx - 49, top + 108, cx - 34, top + 121, 0xFFE2E0E8);
+        g.fill(cx + 34, top + 108, cx + 49, top + 121, 0xFFE2E0E8);
+        g.fill(cx - 36, top + 119, cx + 36, top + 128, 0xFFB8B7C6);
+
+        // Angular eyes: violet iris, white highlight and defined upper brow.
+        g.fill(cx - 30, top + 75, cx - 5, top + 82, 0xFF55506A);
+        g.fill(cx + 5, top + 75, cx + 30, top + 82, 0xFF55506A);
+        g.fill(cx - 27, top + 81, cx - 7, top + 89, 0xFFF5F3FF);
+        g.fill(cx + 7, top + 81, cx + 27, top + 89, 0xFFF5F3FF);
+        g.fill(cx - 22, top + 82, cx - 12, top + 89, 0xFFB48AFF);
+        g.fill(cx + 12, top + 82, cx + 22, top + 89, 0xFFB48AFF);
+        g.fill(cx - 19, top + 82, cx - 15, top + 90, 0xFF090711);
+        g.fill(cx + 15, top + 82, cx + 19, top + 90, 0xFF090711);
+        g.fill(cx - 28, top + 73, cx - 6, top + 77, 0xFF272338);
+        g.fill(cx + 6, top + 73, cx + 28, top + 77, 0xFF272338);
+
+        // A clear nose ridge and sculpted lower half give the face depth.
+        g.fill(cx - 5, top + 88, cx + 5, top + 104, 0xFF302A42);
+        g.fill(cx - 10, top + 101, cx + 10, top + 108, 0xFF1E1A2D);
+        g.fill(cx - 24, top + 108, cx + 24, top + 119, 0xFF141322);
+        g.fill(cx - 15, top + 112, cx + 15, top + 116, 0xFF7B3FA9);
+        g.fill(cx - 13, top + 129, cx + 13, top + 136, 0xFFC2C1CD);
+
+        // Coat seams and chest clasp.
+        g.fill(cx - 9, top + 145, cx + 9, top + 183, 0xFF252A3B);
+        g.fill(cx - 6, top + 152, cx + 6, top + 169, 0xFF89899D);
+        g.fill(cx - 90, top + 205, cx + 90, top + 216, 0xFF060810);
     }
 
     @Override
