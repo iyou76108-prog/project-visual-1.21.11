@@ -54,6 +54,10 @@ public final class ModuleSettingsScreen extends Screen {
                 rows.add(new Row("Сила анимации", String.format(java.util.Locale.ROOT, "%.0f%%",
                         VisualFeatures.swingStrength() * 100.0F), RowType.SWING_STRENGTH));
             }
+            case "Perspective" -> rows.add(new Row("Ракурс камеры",
+                    VisualFeatures.perspectiveMode() == 0 ? "От третьего лица — сзади" : "От третьего лица — спереди",
+                    RowType.PERSPECTIVE_MODE));
+            case "Camera Clip" -> rows.add(new Row("Коллизия камеры", "Камера проходит через блоки", RowType.INFO));
             case "Trainer" -> rows.add(new Row("Окно тренера", HudWindowManager.isVisible("trainer")
                     ? "Показывается" : "Скрыто", RowType.TRAINER_WINDOW));
             case "Watermark", "FPS Counter", "Ping" ->
@@ -187,6 +191,7 @@ public final class ModuleSettingsScreen extends Screen {
             case HITBOX_RESET -> VisualFeatures.setHitboxExpansion(0.5D);
             case HITBOX_WIDTH_RESET -> VisualFeatures.setHitboxVisualWidth(2.0F);
             case SWING_STYLE -> VisualFeatures.cycleSwingStyle();
+            case PERSPECTIVE_MODE -> VisualFeatures.cyclePerspectiveMode();
             case TRAINER_WINDOW -> HudWindowManager.setVisible("trainer", !HudWindowManager.isVisible("trainer"));
             case WATERMARK_WINDOW -> HudWindowManager.setVisible("watermark", !HudWindowManager.isVisible("watermark"));
             case CONTROLS_WINDOW -> HudWindowManager.setVisible("controls", !HudWindowManager.isVisible("controls"));
@@ -231,7 +236,7 @@ public final class ModuleSettingsScreen extends Screen {
     private enum RowType {
         CYCLE, PARTICLE_COUNT, TINT_COLOR, TINT_DURATION, TINT_OPACITY,
         HITBOX_EXPANSION, HITBOX_RESET, HITBOX_WIDTH, HITBOX_WIDTH_RESET,
-        SWING_STYLE, SWING_STRENGTH, TRAINER_WINDOW, WATERMARK_WINDOW,
+        SWING_STYLE, SWING_STRENGTH, PERSPECTIVE_MODE, TRAINER_WINDOW, WATERMARK_WINDOW,
         CONTROLS_WINDOW, PLAYER_STATS_WINDOW, TARGET_WINDOW, ARRAY_WINDOW,
         NOTIFICATIONS_WINDOW, INFO
     }
