@@ -1,7 +1,14 @@
 package dev.projectvisual.client;
 
+import net.fabricmc.loader.api.FabricLoader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Properties;
 
 public final class VisualFeatures {
     private static final Map<String, Boolean> STATES = new LinkedHashMap<>();
@@ -32,6 +39,7 @@ public final class VisualFeatures {
         STATES.put("FPS Counter", true);
         STATES.put("Watermark", true);
         STATES.put("Array List", true);
+        loadConfig();
     }
 
     private VisualFeatures() {}
@@ -41,7 +49,10 @@ public final class VisualFeatures {
     }
 
     public static void setEnabled(String module, boolean enabled) {
-        if (STATES.containsKey(module)) STATES.put(module, enabled);
+        if (STATES.containsKey(module)) {
+            STATES.put(module, enabled);
+            saveConfig();
+        }
     }
 
     public static void toggle(String module) {
@@ -74,6 +85,7 @@ public final class VisualFeatures {
     public static void setCustomAccentColor(int color) {
         customAccentColor = 0xFF000000 | (color & 0x00FFFFFF);
         setEnabled("Color Theme", true);
+        saveConfig();
     }
 
     public static double hitboxExpansion() {
@@ -82,6 +94,7 @@ public final class VisualFeatures {
 
     public static void setHitboxExpansion(double value) {
         hitboxExpansion = Math.max(0.05D, Math.min(2.0D, value));
+        saveConfig();
     }
 
     public static float hitboxVisualWidth() {
@@ -90,6 +103,7 @@ public final class VisualFeatures {
 
     public static void setHitboxVisualWidth(float value) {
         hitboxVisualWidth = Math.max(0.5F, Math.min(5.0F, value));
+        saveConfig();
     }
 
     public static int hitParticleStyle() {
@@ -98,6 +112,7 @@ public final class VisualFeatures {
 
     public static void cycleHitParticleStyle() {
         hitParticleStyle = (hitParticleStyle + 1) % 5;
+        saveConfig();
     }
 
     public static int hitParticleCount() {
@@ -106,6 +121,7 @@ public final class VisualFeatures {
 
     public static void setHitParticleCount(int value) {
         hitParticleCount = Math.max(2, Math.min(24, value));
+        saveConfig();
     }
 
     public static int damageTintColor() {
@@ -117,6 +133,7 @@ public final class VisualFeatures {
         int current = 0;
         for (int i = 0; i < palette.length; i++) if (palette[i] == damageTintColor) current = i;
         damageTintColor = palette[(current + 1) % palette.length];
+        saveConfig();
     }
 
     public static int damageTintDuration() {
@@ -125,6 +142,7 @@ public final class VisualFeatures {
 
     public static void setDamageTintDuration(int value) {
         damageTintDuration = Math.max(150, Math.min(1500, value));
+        saveConfig();
     }
 
     public static float damageTintOpacity() {
@@ -133,6 +151,7 @@ public final class VisualFeatures {
 
     public static void setDamageTintOpacity(float value) {
         damageTintOpacity = Math.max(0.1F, Math.min(1.0F, value));
+        saveConfig();
     }
 
     public static int swingStyle() {
@@ -141,6 +160,7 @@ public final class VisualFeatures {
 
     public static void cycleSwingStyle() {
         swingStyle = (swingStyle + 1) % 4;
+        saveConfig();
     }
 
     public static float swingStrength() {
@@ -149,6 +169,75 @@ public final class VisualFeatures {
 
     public static void setSwingStrength(float value) {
         swingStrength = Math.max(0.2F, Math.min(2.0F, value));
+        saveConfig();
+    }
+
+
+    private static Path configPath() {
+        return FabricLoader.getInstance().getConfigDir().resolve("project_visual_modules.properties");
+    }
+
+    private static void loadConfig() {
+        Properties properties = new Properties();
+        Path file = configPath();
+        if (!Files.exists(file)) return;
+        try (InputStream input = Files.newInputStream(file)) {
+            properties.load(input);
+            for (String module : STATES.keySet()) {
+                String value = properties.getProperty("module." + module);
+                if (value != null) STATES.put(module, Boolean.parseBoolean(value));
+            }
+            customAccentColor = parseInt(properties, "accent", customAccentColor);
+            hitboxExpansion = clamp(parseDouble(properties, "hitboxExpansion", hitboxExpansion), 0.05D, 2.0D);
+            hitboxVisualWidth = (float) clamp(parseDouble(properties, "hitboxVisualWidth", hitboxVisualWidth), 0.5D, 5.0D);
+            hitParticleStyle = (int) clamp(parseInt(properties, "hitParticleStyle", hitParticleStyle), 0, 4);
+            hitParticleCount = (int) clamp(parseInt(properties, "hitParticleCount", hitParticleCount), 2, 24);
+            damageTintColor = parseInt(properties, "damageTintColor", damageTintColor);
+            damageTintDuration = (int) clamp(parseInt(properties, "damageTintDuration", damageTintDuration), 150, 1500);
+            damageTintOpacity = (float) clamp(parseDouble(properties, "damageTintOpacity", damageTintOpacity), 0.1D, 1.0D);
+            swingStyle = (int) clamp(parseInt(properties, "swingStyle", swingStyle), 0, 3);
+            swingStrength = (float) clamp(parseDouble(properties, "swingStrength", swingStrength), 0.2D, 2.0D);
+        } catch (IOException | NumberFormatException ignored) {
+            // Defaults are safe when a damaged config is encountered.
+        }
+    }
+
+    private static void saveConfig() {
+        Properties properties = new Properties();
+        STATES.forEach((module, enabled) -> properties.setProperty("module." + module, Boolean.toString(enabled)));
+        properties.setProperty("accent", Integer.toString(customAccentColor));
+        properties.setProperty("hitboxExpansion", Double.toString(hitboxExpansion));
+        properties.setProperty("hitboxVisualWidth", Float.toString(hitboxVisualWidth));
+        properties.setProperty("hitParticleStyle", Integer.toString(hitParticleStyle));
+        properties.setProperty("hitParticleCount", Integer.toString(hitParticleCount));
+        properties.setProperty("damageTintColor", Integer.toString(damageTintColor));
+        properties.setProperty("damageTintDuration", Integer.toString(damageTintDuration));
+        properties.setProperty("damageTintOpacity", Float.toString(damageTintOpacity));
+        properties.setProperty("swingStyle", Integer.toString(swingStyle));
+        properties.setProperty("swingStrength", Float.toString(swingStrength));
+        try {
+            Path file = configPath();
+            Files.createDirectories(file.getParent());
+            try (OutputStream output = Files.newOutputStream(file)) {
+                properties.store(output, "PROJECT VISUAL module states and settings");
+            }
+        } catch (IOException ignored) {
+            // The client remains usable if its config folder is read-only.
+        }
+    }
+
+    private static int parseInt(Properties properties, String key, int fallback) {
+        try { return Integer.parseInt(properties.getProperty(key, Integer.toString(fallback))); }
+        catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    private static double parseDouble(Properties properties, String key, double fallback) {
+        try { return Double.parseDouble(properties.getProperty(key, Double.toString(fallback))); }
+        catch (NumberFormatException ignored) { return fallback; }
+    }
+
+    private static double clamp(double value, double min, double max) {
+        return Math.max(min, Math.min(max, value));
     }
 
     public static boolean isPlayerEsp() {
