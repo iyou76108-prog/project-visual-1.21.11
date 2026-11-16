@@ -36,7 +36,7 @@ public final class ClickGuiScreen extends Screen {
         {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","В разработке — нет рендера","В разработке — нет рендера"},
         {"Brighter world","Weather visuals","Local world time","World color mood","Highlight selected blocks","Movement path markers"},
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
-        {"Hand position and scale","Временно отключено: hook 1.21.11 изменился","Quick zoom control","Smoother camera motion","В разработке"},
+        {"Hand position and scale","Camera passes through blocks in third person","Quick zoom control","Smoother camera motion","Lock third-person view (back/front)"},
         {"On-screen alerts","Client branding","Visible enabled modules","В разработке","Accent colors","PvP quests in the top-right corner"},
         {"Meteor-style player targeting expansion (+0.5)","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
         {"Open the complete skin library and training cases"},
@@ -204,7 +204,6 @@ public final class ClickGuiScreen extends Screen {
 
     private static boolean isModuleAvailable(String module) {
         return !module.equals("Hand Cosmetics") && !module.equals("Cape Effects")
-                && !module.equals("Camera Clip") && !module.equals("Perspective")
                 && !module.equals("Custom Font");
     }
 
