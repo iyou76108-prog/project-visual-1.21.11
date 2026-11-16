@@ -1,0 +1,156 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+}
+enum FriendshipStatus { PENDING ACCEPTED DECLINED }
+enum GameType { CHESS TIC_TAC_TOE }
+enum GameStatus { INVITED ACTIVE FINISHED DECLINED }
+enum PurchaseStatus { PENDING PAID FAILED }
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  username String @unique
+  passwordHash String
+  emailVerifiedAt DateTime?
+  minecraftUsername String?
+  minecraftUuid String? @unique
+  equippedSkin String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sessions Session[]
+  verificationTokens VerificationToken[]
+  pairCodes MinecraftPairCode[]
+  minecraftTokens MinecraftToken[]
+  presence Presence?
+  friendshipsSent Friendship[] @relation("FriendRequester")
+  friendshipsReceived Friendship[] @relation("FriendAddressee")
+  purchases CasePurchase[]
+  caseCredits CaseCredit[]
+  inventory InventoryItem[]
+  gamesAsPlayer1 GameMatch[] @relation("GamePlayer1")
+  gamesAsPlayer2 GameMatch[] @relation("GamePlayer2")
+}
+model Session {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, expiresAt])
+}
+model VerificationToken {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, expiresAt])
+}
+model MinecraftPairCode {
+  id String @id @default(cuid())
+  codeHash String @unique
+  userId String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, expiresAt])
+}
+model MinecraftToken {
+  id String @id @default(cuid())
+  tokenHash String @unique
+  userId String
+  expiresAt DateTime
+  lastUsedAt DateTime?
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, expiresAt])
+}
+model Presence {
+  userId String @id
+  lastSeen DateTime @default(now())
+  expiresAt DateTime
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([expiresAt])
+}
+model Friendship {
+  id String @id @default(cuid())
+  requesterId String
+  addresseeId String
+  status FriendshipStatus @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  requester User @relation("FriendRequester", fields:[requesterId], references:[id], onDelete:Cascade)
+  addressee User @relation("FriendAddressee", fields:[addresseeId], references:[id], onDelete:Cascade)
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+model CaseDefinition {
+  id String @id
+  title String
+  description String
+  priceCents Int
+  currency String @default("usd")
+  drops Json
+  active Boolean @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  purchases CasePurchase[]
+  credits CaseCredit[]
+}
+model CasePurchase {
+  id String @id @default(cuid())
+  userId String
+  caseId String
+  providerSessionId String? @unique
+  status PurchaseStatus @default(PENDING)
+  amountCents Int
+  currency String @default("usd")
+  createdAt DateTime @default(now())
+  paidAt DateTime?
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  case CaseDefinition @relation(fields:[caseId], references:[id], onDelete:Restrict)
+  @@index([userId, status])
+}
+model CaseCredit {
+  id String @id @default(cuid())
+  userId String
+  caseId String
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  case CaseDefinition @relation(fields:[caseId], references:[id], onDelete:Restrict)
+  @@index([userId, createdAt])
+}
+model InventoryItem {
+  id String @id @default(cuid())
+  userId String
+  skinId String
+  source String
+  createdAt DateTime @default(now())
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  @@index([userId, skinId])
+}
+model GameMatch {
+  id String @id @default(cuid())
+  type GameType
+  status GameStatus @default(INVITED)
+  player1Id String
+  player2Id String
+  nextTurnUserId String
+  state Json
+  version Int @default(0)
+  winnerId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  player1 User @relation("GamePlayer1", fields:[player1Id], references:[id], onDelete:Cascade)
+  player2 User @relation("GamePlayer2", fields:[player2Id], references:[id], onDelete:Cascade)
+  @@index([player1Id, status])
+  @@index([player2Id, status])
+}
