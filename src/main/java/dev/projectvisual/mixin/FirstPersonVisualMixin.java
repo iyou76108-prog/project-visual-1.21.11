@@ -36,9 +36,30 @@ public abstract class FirstPersonVisualMixin {
         }
 
         if (VisualFeatures.isEnabled("Swing Animation") && swingProgress > 0.0F) {
-            float swing = (float) Math.sin(Math.sqrt(swingProgress) * Math.PI);
-            matrices.mulPose(Axis.ZP.rotationDegrees(side * swing * 12.0F));
-            matrices.mulPose(Axis.YP.rotationDegrees(side * swing * 8.0F));
+            float eased = (float) Math.sin(Math.sqrt(swingProgress) * Math.PI);
+            float swing = eased * VisualFeatures.swingStrength();
+            switch (VisualFeatures.swingStyle()) {
+                case 0 -> {
+                    matrices.mulPose(Axis.ZP.rotationDegrees(side * swing * 12.0F));
+                    matrices.mulPose(Axis.YP.rotationDegrees(side * swing * 8.0F));
+                }
+                case 1 -> {
+                    matrices.mulPose(Axis.XP.rotationDegrees(-swing * 10.0F));
+                    matrices.mulPose(Axis.ZP.rotationDegrees(side * swing * 17.0F));
+                    matrices.mulPose(Axis.YP.rotationDegrees(side * swing * 5.0F));
+                }
+                case 2 -> {
+                    matrices.mulPose(Axis.ZP.rotationDegrees(side * swing * 22.0F));
+                    matrices.mulPose(Axis.YP.rotationDegrees(side * swing * 16.0F));
+                    matrices.mulPose(Axis.XP.rotationDegrees(-swing * 7.0F));
+                }
+                case 3 -> {
+                    float snap = (float) Math.pow(eased, 0.45D);
+                    matrices.mulPose(Axis.YP.rotationDegrees(-side * snap * 15.0F * VisualFeatures.swingStrength()));
+                    matrices.mulPose(Axis.ZP.rotationDegrees(side * snap * 9.0F * VisualFeatures.swingStrength()));
+                }
+                default -> { }
+            }
         }
 
         if (VisualFeatures.isEnabled("Item Sway")) {
