@@ -19,7 +19,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
-import net.minecraft.world.item.SwordItem;
+import net.minecraft.world.item.Items;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -706,7 +706,12 @@ public final class ChessWorldGame {
         boolean flyingSpellbook = VisualFeatures.isEnabled("Flying Spellbook") && thirdPerson && alive;
         boolean handCosmetics = VisualFeatures.isEnabled("Hand Cosmetics") && thirdPerson && alive;
         boolean capeEffects = VisualFeatures.isEnabled("Cape Effects") && thirdPerson && alive;
-        boolean swordHeld = alive && client.player.getMainHandItem().getItem() instanceof SwordItem;
+        boolean swordHeld = alive && (client.player.getMainHandItem().is(Items.WOODEN_SWORD)
+                || client.player.getMainHandItem().is(Items.STONE_SWORD)
+                || client.player.getMainHandItem().is(Items.IRON_SWORD)
+                || client.player.getMainHandItem().is(Items.GOLDEN_SWORD)
+                || client.player.getMainHandItem().is(Items.DIAMOND_SWORD)
+                || client.player.getMainHandItem().is(Items.NETHERITE_SWORD));
         boolean pencilSword = VisualFeatures.isEnabled("Pencil Sword") && thirdPerson && swordHeld;
         boolean divineRapier = VisualFeatures.isEnabled("Divine Rapier") && thirdPerson && swordHeld;
         boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
