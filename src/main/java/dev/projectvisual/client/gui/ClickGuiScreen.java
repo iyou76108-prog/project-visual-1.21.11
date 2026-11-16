@@ -233,8 +233,10 @@ public final class ClickGuiScreen extends Screen {
                 if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
                     String module=names[n];
                     if(!isModuleAvailable(module)){
-                        Minecraft.getInstance().player.displayClientMessage(
-                                Component.literal("§eЭтот модуль пока в разработке."), true);
+                        if (Minecraft.getInstance().player != null) {
+                            Minecraft.getInstance().player.displayClientMessage(
+                                    Component.literal("§eЭтот модуль пока в разработке."), true);
+                        }
                         return true;
                     }
                     if(module.equals("Skin")){
