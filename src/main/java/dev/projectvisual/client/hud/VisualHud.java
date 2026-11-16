@@ -2,6 +2,7 @@ package dev.projectvisual.client.hud;
 
 import dev.projectvisual.client.ProjectVisualClient;
 import dev.projectvisual.client.VisualFeatures;
+import dev.projectvisual.client.training.TrainingManager;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
 import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
 import net.minecraft.client.Minecraft;
@@ -65,6 +66,16 @@ public final class VisualHud {
         while (!rightClicks.isEmpty() && now - rightClicks.peekFirst() > 1000L) rightClicks.removeFirst();
     }
 
+    private static String fitLine(Minecraft mc, String value, int maxWidth) {
+        if (mc.font.width(value) <= maxWidth) return value;
+        String suffix = "...";
+        String fitted = value;
+        while (!fitted.isEmpty() && mc.font.width(fitted + suffix) > maxWidth) {
+            fitted = fitted.substring(0, fitted.length() - 1);
+        }
+        return fitted + suffix;
+    }
+
     private static void line(GuiGraphics g, Minecraft mc, String value, int x, int y) {
         int w = mc.font.width(value);
         g.fill(x - 4, y - 3, x + w + 5, y + 10, PANEL);
@@ -99,6 +110,30 @@ public final class VisualHud {
         }
         if (VisualFeatures.isEnabled("Ambience")) {
             g.fill(0, 0, screenWidth, screenHeight, 0x0B9B7BFF);
+        }
+
+        if (VisualFeatures.isEnabled("Trainer")) {
+            int panelW = 246;
+            int panelH = 88;
+            int panelX = screenWidth - panelW - 12;
+            int panelY = 52;
+            g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xD910121D);
+            g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFFD7A85D);
+            g.fill(panelX, panelY, panelX + 2, panelY + panelH, VisualFeatures.accentColor());
+            g.drawString(mc.font, "ТРЕНЕР  /  ЕЖЕДНЕВНОЕ ЗАДАНИЕ",
+                    panelX + 10, panelY + 8, 0xFFFFD58A, false);
+            String quest = TrainingManager.getQuestTitle();
+            g.drawString(mc.font, fitLine(mc, quest, panelW - 20),
+                    panelX + 10, panelY + 27, TEXT, false);
+            int barX = panelX + 10;
+            int barY = panelY + 47;
+            int barW = panelW - 20;
+            g.fill(barX, barY, barX + barW, barY + 7, 0xFF343545);
+            int fillW = (int) Math.round(barW * TrainingManager.getProgressRatio());
+            if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 7, 0xFF69D8A7);
+            String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
+                    + "   КЕЙСЫ " + TrainingManager.getCaseCount();
+            g.drawString(mc.font, stats, panelX + 10, panelY + 64, MUTED, false);
         }
 
         int x = 10;
