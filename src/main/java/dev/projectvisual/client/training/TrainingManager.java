@@ -45,6 +45,8 @@ public final class TrainingManager {
     private static float targetHealth;
     private static boolean trackedAttackWasMace;
     private static int trackedAttackTicks;
+    private static boolean trackedHitConfirmed;
+    private static int confirmedHealthWaitTicks;
 
     private TrainingManager() {}
 
@@ -57,25 +59,33 @@ public final class TrainingManager {
             clearTrackedTarget();
             return;
         }
-
         if (trackedTarget.isRemoved() || trackedTarget.level() != client.level || trackedAttackTicks <= 0) {
             clearTrackedTarget();
             return;
         }
-
-        float currentHealth = trackedTarget.getHealth();
-        if (trackedTarget.getLastHurtByMob() != client.player) {
-            targetHealth = currentHealth;
-            trackedAttackTicks--;
+        trackedAttackTicks--;
+        if (!trackedHitConfirmed) {
             if (trackedAttackTicks <= 0) clearTrackedTarget();
             return;
         }
+        // The server hurt event confirms the hit; health synchronization can arrive a few ticks later.
+        float currentHealth = trackedTarget.getHealth();
         double dealt = targetHealth - currentHealth;
         if (dealt > 0.001D) {
             recordDamage(dealt, trackedAttackWasMace);
+            clearTrackedTarget();
+            return;
         }
-        targetHealth = currentHealth;
-        trackedAttackTicks--;
+        confirmedHealthWaitTicks--;
+        if (confirmedHealthWaitTicks <= 0 || trackedAttackTicks <= 0) clearTrackedTarget();
+    }
+
+    /** Called when the exact entity previously attacked receives its server hurt animation. */
+    public static void onHurtAnimation(LivingEntity victim) {
+        if (victim == trackedTarget && trackedAttackTicks > 0) {
+            trackedHitConfirmed = true;
+            confirmedHealthWaitTicks = 24;
+        }
     }
 
     /** Called at the head of the local player's attack packet path. */
@@ -91,6 +101,8 @@ public final class TrainingManager {
         trackedAttackWasMace = attacker.getMainHandItem().is(Items.MACE)
                 || attacker.getOffhandItem().is(Items.MACE);
         trackedAttackTicks = 40;
+        trackedHitConfirmed = false;
+        confirmedHealthWaitTicks = 0;
     }
 
     /** Called only when the client accepted a block-use action with a cobweb stack. */
@@ -211,6 +223,8 @@ public final class TrainingManager {
         trackedTarget = null;
         trackedAttackTicks = 0;
         trackedAttackWasMace = false;
+        trackedHitConfirmed = false;
+        confirmedHealthWaitTicks = 0;
     }
 
     private static Path savePath() {
