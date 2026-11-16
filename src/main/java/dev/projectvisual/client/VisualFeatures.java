@@ -22,6 +22,7 @@ public final class VisualFeatures {
     private static float damageTintOpacity = 1.0F;
     private static int swingStyle = 1;
     private static float swingStrength = 1.0F;
+    private static int perspectiveMode;
 
     static {
         String[] modules = {
@@ -172,6 +173,15 @@ public final class VisualFeatures {
         saveConfig();
     }
 
+    public static int perspectiveMode() {
+        return perspectiveMode;
+    }
+
+    public static void cyclePerspectiveMode() {
+        perspectiveMode = (perspectiveMode + 1) % 2;
+        saveConfig();
+    }
+
 
     private static Path configPath() {
         return FabricLoader.getInstance().getConfigDir().resolve("project_visual_modules.properties");
@@ -197,6 +207,7 @@ public final class VisualFeatures {
             damageTintOpacity = (float) clamp(parseDouble(properties, "damageTintOpacity", damageTintOpacity), 0.1D, 1.0D);
             swingStyle = (int) clamp(parseInt(properties, "swingStyle", swingStyle), 0, 3);
             swingStrength = (float) clamp(parseDouble(properties, "swingStrength", swingStrength), 0.2D, 2.0D);
+            perspectiveMode = (int) clamp(parseInt(properties, "perspectiveMode", perspectiveMode), 0, 1);
         } catch (IOException | NumberFormatException ignored) {
             // Defaults are safe when a damaged config is encountered.
         }
@@ -215,6 +226,7 @@ public final class VisualFeatures {
         properties.setProperty("damageTintOpacity", Float.toString(damageTintOpacity));
         properties.setProperty("swingStyle", Integer.toString(swingStyle));
         properties.setProperty("swingStrength", Float.toString(swingStrength));
+        properties.setProperty("perspectiveMode", Integer.toString(perspectiveMode));
         try {
             Path file = configPath();
             Files.createDirectories(file.getParent());
