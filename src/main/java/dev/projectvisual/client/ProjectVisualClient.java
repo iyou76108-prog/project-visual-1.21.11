@@ -4,6 +4,7 @@ import dev.projectvisual.client.gui.ClickGuiScreen;
 import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.hud.VisualHud;
+import dev.projectvisual.client.hud.HudWindowManager;
 import dev.projectvisual.client.VisualWorldEffects;
 import dev.projectvisual.client.training.TrainingManager;
 import net.fabricmc.api.ClientModInitializer;
@@ -25,6 +26,7 @@ public final class ProjectVisualClient implements ClientModInitializer {
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyMapping(
                 "key.project_visual.open_gui", GLFW.GLFW_KEY_RIGHT_SHIFT, CATEGORY));
         VisualHud.register();
+        HudWindowManager.register();
         ChessWorldGame.register();
         MinesweeperWorldGame.register();
         VisualWorldEffects.register();
