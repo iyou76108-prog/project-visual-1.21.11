@@ -50,6 +50,9 @@ public final class SkinManagerScreen extends Screen {
         g.fill(px - 1, py - 1, px + panelW + 1, py + panelH + 1, 0xFF5B5278);
         g.fill(px, py, px + panelW, py + panelH, BG);
         g.fill(px, py, px + panelW, py + 3, VisualFeatures.accentColor());
+        if (caseReward != null && rewardGranted && System.currentTimeMillis() - caseStartedAt > 5500L) {
+            caseReward = null;
+        }
 
         g.drawString(font, "СКИНЫ", px + 20, py + 17, TEXT, false);
         g.drawString(font, "Выбери образ. Четыре редких скина открываются только из тренировочных кейсов.",
