@@ -43,7 +43,12 @@ public final class ClickGuiScreen extends Screen {
     private static int language=0;
     private EditBox accentHexBox;
 
-    public ClickGuiScreen(){super(Component.literal("PROJECT VISUAL"));}
+    public ClickGuiScreen(){this(0);}
+
+    public ClickGuiScreen(int initialCategory){
+        super(Component.literal("PROJECT VISUAL"));
+        this.category = Math.max(0, Math.min(CATS.length - 1, initialCategory));
+    }
 
     @Override
     protected void init() {
