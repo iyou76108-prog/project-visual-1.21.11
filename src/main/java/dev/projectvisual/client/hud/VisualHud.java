@@ -66,6 +66,30 @@ public final class VisualHud {
         while (!rightClicks.isEmpty() && now - rightClicks.peekFirst() > 1000L) rightClicks.removeFirst();
     }
 
+    private static void renderTrainerPanel(GuiGraphics g, Minecraft mc, int screenWidth) {
+        int panelW = 246;
+        int panelH = 88;
+        int panelX = screenWidth - panelW - 12;
+        int panelY = 52;
+        g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xD910121D);
+        g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFFD7A85D);
+        g.fill(panelX, panelY, panelX + 2, panelY + panelH, VisualFeatures.accentColor());
+        g.drawString(mc.font, "ТРЕНЕР  /  ЕЖЕДНЕВНОЕ ЗАДАНИЕ",
+                panelX + 10, panelY + 8, 0xFFFFD58A, false);
+        String quest = TrainingManager.getQuestTitle();
+        g.drawString(mc.font, fitLine(mc, quest, panelW - 20),
+                panelX + 10, panelY + 27, TEXT, false);
+        int barX = panelX + 10;
+        int barY = panelY + 47;
+        int barW = panelW - 20;
+        g.fill(barX, barY, barX + barW, barY + 7, 0xFF343545);
+        int fillW = (int) Math.round(barW * TrainingManager.getProgressRatio());
+        if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 7, 0xFF69D8A7);
+        String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
+                + "   КЕЙСЫ " + TrainingManager.getCaseCount();
+        g.drawString(mc.font, stats, panelX + 10, panelY + 64, MUTED, false);
+    }
+
     private static String fitLine(Minecraft mc, String value, int maxWidth) {
         if (mc.font.width(value) <= maxWidth) return value;
         String suffix = "...";
@@ -85,11 +109,16 @@ public final class VisualHud {
 
     private static void render(GuiGraphics g, net.minecraft.client.DeltaTracker tickCounter) {
         Minecraft mc = Minecraft.getInstance();
-        if (!enabled || mc.options.hideGui || mc.player == null || mc.level == null) return;
+        if (mc.options.hideGui || mc.player == null || mc.level == null) return;
 
-        long now = System.currentTimeMillis();
         int screenWidth = mc.getWindow().getGuiScaledWidth();
         int screenHeight = mc.getWindow().getGuiScaledHeight();
+        if (!enabled) {
+            if (VisualFeatures.isEnabled("Trainer")) renderTrainerPanel(g, mc, screenWidth);
+            return;
+        }
+
+        long now = System.currentTimeMillis();
 
         if (lastWorld != mc.level) {
             lastWorld = mc.level;
@@ -112,29 +141,7 @@ public final class VisualHud {
             g.fill(0, 0, screenWidth, screenHeight, 0x0B9B7BFF);
         }
 
-        if (VisualFeatures.isEnabled("Trainer")) {
-            int panelW = 246;
-            int panelH = 88;
-            int panelX = screenWidth - panelW - 12;
-            int panelY = 52;
-            g.fill(panelX, panelY, panelX + panelW, panelY + panelH, 0xD910121D);
-            g.fill(panelX, panelY, panelX + panelW, panelY + 2, 0xFFD7A85D);
-            g.fill(panelX, panelY, panelX + 2, panelY + panelH, VisualFeatures.accentColor());
-            g.drawString(mc.font, "ТРЕНЕР  /  ЕЖЕДНЕВНОЕ ЗАДАНИЕ",
-                    panelX + 10, panelY + 8, 0xFFFFD58A, false);
-            String quest = TrainingManager.getQuestTitle();
-            g.drawString(mc.font, fitLine(mc, quest, panelW - 20),
-                    panelX + 10, panelY + 27, TEXT, false);
-            int barX = panelX + 10;
-            int barY = panelY + 47;
-            int barW = panelW - 20;
-            g.fill(barX, barY, barX + barW, barY + 7, 0xFF343545);
-            int fillW = (int) Math.round(barW * TrainingManager.getProgressRatio());
-            if (fillW > 0) g.fill(barX, barY, barX + fillW, barY + 7, 0xFF69D8A7);
-            String stats = "КВЕСТЫ " + TrainingManager.getCompletedQuests()
-                    + "   КЕЙСЫ " + TrainingManager.getCaseCount();
-            g.drawString(mc.font, stats, panelX + 10, panelY + 64, MUTED, false);
-        }
+        if (VisualFeatures.isEnabled("Trainer")) renderTrainerPanel(g, mc, screenWidth);
 
         int x = 10;
         int y = 10;
