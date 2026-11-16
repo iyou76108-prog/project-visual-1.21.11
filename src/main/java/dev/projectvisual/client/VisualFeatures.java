@@ -203,7 +203,7 @@ public final class VisualFeatures {
 
     public static int chestEspRadius() { return chestEspRadius; }
     public static void setChestEspRadius(int value) {
-        chestEspRadius = Math.max(8, Math.min(48, value));
+        chestEspRadius = Math.max(8, Math.min(32, value));
         saveConfig();
     }
 
@@ -259,7 +259,7 @@ public final class VisualFeatures {
             perspectiveMode = (int) clamp(parseInt(properties, "perspectiveMode", perspectiveMode), 0, 1);
             zoomScale = (float) clamp(parseDouble(properties, "zoomScale", zoomScale), 0.1D, 0.75D);
             espDistance = (int) clamp(parseInt(properties, "espDistance", espDistance), 8, 128);
-            chestEspRadius = (int) clamp(parseInt(properties, "chestEspRadius", chestEspRadius), 8, 48);
+            chestEspRadius = (int) clamp(parseInt(properties, "chestEspRadius", chestEspRadius), 8, 32);
             chinaHatSize = (float) clamp(parseDouble(properties, "chinaHatSize", chinaHatSize), 0.5D, 1.75D);
             viewModelScale = (float) clamp(parseDouble(properties, "viewModelScale", viewModelScale), 0.5D, 1.5D);
             crosshairSize = (float) clamp(parseDouble(properties, "crosshairSize", crosshairSize), 0.5D, 2.0D);
