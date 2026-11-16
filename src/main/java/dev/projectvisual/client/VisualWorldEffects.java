@@ -144,18 +144,27 @@ public final class VisualWorldEffects {
         if (!VisualFeatures.isEnabled("Hit Particles") || client.level == null
                 || target.level() != client.level || !target.isAlive()) return;
 
+        int style = VisualFeatures.hitParticleStyle();
+        if (style == 4) return;
         ThreadLocalRandom random = ThreadLocalRandom.current();
         double centerY = target.getY() + target.getBbHeight() * 0.58D;
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < VisualFeatures.hitParticleCount(); i++) {
             double x = target.getX() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
             double y = centerY + random.nextDouble(-0.12D, 0.28D) * target.getBbHeight();
             double z = target.getZ() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
             double vx = random.nextDouble(-0.11D, 0.11D);
             double vy = random.nextDouble(0.04D, 0.16D);
             double vz = random.nextDouble(-0.11D, 0.11D);
-            client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
-            if ((i & 1) == 0) {
-                client.level.addParticle(ParticleTypes.CRIT, x, y, z, vx * 1.35D, vy, vz * 1.35D);
+            switch (style) {
+                case 0 -> {
+                    client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
+                    if ((i & 1) == 0) client.level.addParticle(ParticleTypes.CRIT,
+                            x, y, z, vx * 1.35D, vy, vz * 1.35D);
+                }
+                case 1 -> client.level.addParticle(ParticleTypes.CRIT, x, y, z, vx, vy, vz);
+                case 2 -> client.level.addParticle(ParticleTypes.ENCHANT, x, y, z, vx, vy, vz);
+                case 3 -> client.level.addParticle(ParticleTypes.FLAME, x, y, z, vx * 0.4D, vy, vz * 0.4D);
+                default -> client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
             }
         }
     }
@@ -190,7 +199,7 @@ public final class VisualWorldEffects {
                 if (player == client.player || !player.isAlive()
                         || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
                 int color = VisualFeatures.accentColor();
-                drawBox(context, lines, player.getBoundingBox(), camera, color, 1.7F);
+                drawBox(context, lines, player.getBoundingBox(), camera, color, VisualFeatures.hitboxVisualWidth());
             }
         }
 
@@ -241,7 +250,7 @@ public final class VisualWorldEffects {
                     if (!(entity instanceof Player target) || target == client.player
                             || !target.isAlive() || client.player.distanceToSqr(target) > 64.0D * 64.0D) continue;
                     drawBox(context, espLines, target.getBoundingBox().inflate(VisualFeatures.hitboxExpansion()),
-                            camera, color, 2.0F);
+                            camera, color, VisualFeatures.hitboxVisualWidth());
                 }
             }
             if (drawChestEsp) {
