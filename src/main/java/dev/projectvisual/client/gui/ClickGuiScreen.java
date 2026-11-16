@@ -33,7 +33,7 @@ public final class ClickGuiScreen extends Screen {
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
         {"Particles on confirmed hurt event","Screen-edge flash on damage","Green feedback on entity target","Replaces vanilla crosshair","Target name, health, armor and distance","Inventory count and pop counter"},
-        {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","В разработке — нет рендера","В разработке — нет рендера"},
+        {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","Наручи и рунические браслеты на руках","Анимированная накидка с фиолетовыми швами"},
         {"Brighter world","Weather visuals","Local world time","World color mood","Highlight selected blocks","Movement path markers"},
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
         {"Hand position and scale","Camera passes through blocks in third person","Quick zoom control","Smoother camera motion","Lock third-person view (back/front)"},
@@ -203,8 +203,7 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private static boolean isModuleAvailable(String module) {
-        return !module.equals("Hand Cosmetics") && !module.equals("Cape Effects")
-                && !module.equals("Custom Font");
+        return !module.equals("Custom Font");
     }
 
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean dbl){
