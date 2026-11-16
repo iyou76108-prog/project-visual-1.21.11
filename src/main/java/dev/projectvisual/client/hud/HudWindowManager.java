@@ -39,7 +39,11 @@ public final class HudWindowManager {
                 "key.project_visual.hud_editor", GLFW.GLFW_KEY_H, category));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (editKey.consumeClick()) {
-                toggleEditMode();
+                if (client.screen instanceof HudEditorScreen) {
+                    client.setScreen(null);
+                } else if (client.screen == null) {
+                    client.setScreen(new HudEditorScreen());
+                }
             }
         });
     }
@@ -48,15 +52,19 @@ public final class HudWindowManager {
         return editMode;
     }
 
-    public static void toggleEditMode() {
-        editMode = !editMode;
+    public static void setEditMode(boolean enabled) {
+        editMode = enabled;
         stopDragging();
         Minecraft client = Minecraft.getInstance();
         if (client.player != null) {
             client.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                    editMode ? "§bHUD EDITOR §7— перетаскивай окна за заголовок, H — выход"
+                    editMode ? "§bHUD EDITOR §7— перетаскивай окна за заголовок, H или ESC — выход"
                             : "§7HUD EDITOR выключен"), true);
         }
+    }
+
+    public static void toggleEditMode() {
+        setEditMode(!editMode);
     }
 
     public static Frame begin(GuiGraphics g, String id, String title, int screenWidth,
@@ -119,12 +127,17 @@ public final class HudWindowManager {
 
     public static void onMouseMove(double rawX, double rawY) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.getWindow() == null) return;
-        double scaleX = (double) mc.getWindow().getGuiScaledWidth() / Math.max(1, mc.getWindow().getScreenWidth());
-        double scaleY = (double) mc.getWindow().getGuiScaledHeight() / Math.max(1, mc.getWindow().getScreenHeight());
-        mouseX = rawX * scaleX;
-        mouseY = rawY * scaleY;
-        if (mc.screen != null) return;
+        if (mc.getWindow() == null || mc.screen != null) return;
+        onEditorMouseMove(
+                rawX * mc.getWindow().getGuiScaledWidth() / Math.max(1.0D, mc.getWindow().getScreenWidth()),
+                rawY * mc.getWindow().getGuiScaledHeight() / Math.max(1.0D, mc.getWindow().getScreenHeight()));
+    }
+
+    /** Mouse coordinates from Screen are already in GUI-scaled units. */
+    public static void onEditorMouseMove(double x, double y) {
+        mouseX = x;
+        mouseY = y;
+        Minecraft mc = Minecraft.getInstance();
         int guiWidth = mc.getWindow().getGuiScaledWidth();
         int guiHeight = mc.getWindow().getGuiScaledHeight();
         for (Window window : WINDOWS.values()) {
@@ -143,6 +156,16 @@ public final class HudWindowManager {
             if (!down) stopDragging();
             return;
         }
+        handleEditorButton(button, down);
+    }
+
+    public static void onEditorMouseButton(int button, boolean down, double x, double y) {
+        mouseX = x;
+        mouseY = y;
+        handleEditorButton(button, down);
+    }
+
+    private static void handleEditorButton(int button, boolean down) {
         if (!down) {
             stopDragging();
             save();
@@ -155,8 +178,7 @@ public final class HudWindowManager {
             Map.Entry<String, Window> entry = (Map.Entry<String, Window>) entries[i];
             Window window = entry.getValue();
             if (!window.visible) continue;
-            int width = window.width;
-            if (width <= 0) width = defaultWidth(entry.getKey());
+            int width = window.width > 0 ? window.width : defaultWidth(entry.getKey());
             int x = window.x;
             int y = window.y;
             if (mouseX < x || mouseX > x + width || mouseY < y || mouseY > y + HEADER) continue;

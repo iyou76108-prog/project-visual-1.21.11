@@ -8,6 +8,7 @@ import dev.projectvisual.client.gui.SkinManagerScreen;
 import dev.projectvisual.client.gui.ModuleSettingsScreen;
 import dev.projectvisual.client.gui.TicTacToeScreen;
 import dev.projectvisual.client.hud.HudWindowManager;
+import dev.projectvisual.client.hud.HudEditorScreen;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.Minecraft;
@@ -284,8 +285,7 @@ public final class ClickGuiScreen extends Screen {
                 }
             }
             if(mx>=mainX&&mx<=mainX+174&&my>=y+282&&my<=y+310){
-                HudWindowManager.toggleEditMode();
-                Minecraft.getInstance().setScreen(null);
+                Minecraft.getInstance().setScreen(new HudEditorScreen());
                 return true;
             }
         }else if(rightTab==1){
