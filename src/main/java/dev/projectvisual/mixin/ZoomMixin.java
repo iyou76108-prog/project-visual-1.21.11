@@ -15,7 +15,7 @@ public abstract class ZoomMixin {
     private void projectvisual$zoom(Camera camera, float tickProgress, boolean changingFov,
                                     CallbackInfoReturnable<Float> cir) {
         if (VisualFeatures.isEnabled("Zoom") && VisualWorldEffects.isZoomKeyDown()) {
-            cir.setReturnValue(cir.getReturnValue() * 0.25F);
+            cir.setReturnValue(cir.getReturnValue() * VisualFeatures.zoomScale());
         }
     }
 }
