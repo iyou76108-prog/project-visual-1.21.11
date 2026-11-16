@@ -776,31 +776,34 @@ public final class ChessWorldGame {
     }
 
     private static void renderInterworlderMask(VertexConsumer out, BoardTransform t) {
-        // Ash-grey voxel mask worn over the player's face, with the canonical purple glow.
-        box(out, t, -0.178D, 1.445D, 0.112D, 0.178D, 1.775D, 0.235D, 0xFF595963);
-        box(out, t, -0.158D, 1.466D, 0.236D, 0.158D, 1.748D, 0.258D, 0xFF34343F);
-        box(out, t, -0.195D, 1.490D, 0.145D, -0.165D, 1.690D, 0.235D, 0xFF777781);
-        box(out, t, 0.165D, 1.490D, 0.145D, 0.195D, 1.690D, 0.235D, 0xFF777781);
+        // Compact face plate: its rear surface sits almost flush against the player's head.
+        // The straps wrap around the temples so the cosmetic reads as worn equipment.
+        box(out, t, -0.145D, 1.505D, 0.112D, 0.145D, 1.775D, 0.145D, 0xFF34323D);
+        box(out, t, -0.132D, 1.520D, 0.145D, 0.132D, 1.758D, 0.166D, 0xFF55515F);
 
-        // Raised cheek plates and bridge.
-        box(out, t, -0.16D, 1.455D, 0.255D, -0.075D, 1.535D, 0.282D, 0xFF6D6D79);
-        box(out, t, 0.075D, 1.455D, 0.255D, 0.16D, 1.535D, 0.282D, 0xFF6D6D79);
-        box(out, t, -0.026D, 1.525D, 0.255D, 0.026D, 1.665D, 0.287D, 0xFF85818E);
+        // Angular brow and cheek pieces follow the width of the head rather than floating in front.
+        box(out, t, -0.137D, 1.690D, 0.151D, -0.035D, 1.735D, 0.174D, 0xFF77717F);
+        box(out, t, 0.035D, 1.690D, 0.151D, 0.137D, 1.735D, 0.174D, 0xFF77717F);
+        box(out, t, -0.137D, 1.555D, 0.151D, -0.085D, 1.675D, 0.174D, 0xFF77717F);
+        box(out, t, 0.085D, 1.555D, 0.151D, 0.137D, 1.675D, 0.174D, 0xFF77717F);
+        box(out, t, -0.050D, 1.565D, 0.158D, 0.050D, 1.690D, 0.180D, 0xFF898391);
 
-        // Violet eye openings and thin runic lines that climb toward the forehead.
-        box(out, t, -0.132D, 1.615D, 0.281D, -0.056D, 1.694D, 0.296D, 0xFF7D2FE0);
-        box(out, t, 0.056D, 1.615D, 0.281D, 0.132D, 1.694D, 0.296D, 0xFF7D2FE0);
-        box(out, t, -0.115D, 1.635D, 0.297D, -0.074D, 1.675D, 0.305D, 0xFFEBA6FF);
-        box(out, t, 0.074D, 1.635D, 0.297D, 0.115D, 1.675D, 0.305D, 0xFFEBA6FF);
-        box(out, t, -0.12D, 1.690D, 0.282D, -0.095D, 1.746D, 0.296D, 0xFF9C4BFF);
-        box(out, t, 0.095D, 1.690D, 0.282D, 0.12D, 1.746D, 0.296D, 0xFF9C4BFF);
-        box(out, t, -0.095D, 1.735D, 0.283D, -0.04D, 1.758D, 0.298D, 0xFF9C4BFF);
-        box(out, t, 0.04D, 1.735D, 0.283D, 0.095D, 1.758D, 0.298D, 0xFF9C4BFF);
+        // Narrow violet eye slits are inset into the plate, not perched on its surface.
+        box(out, t, -0.112D, 1.650D, 0.173D, -0.035D, 1.680D, 0.181D, 0xFF8D3BE8);
+        box(out, t, 0.035D, 1.650D, 0.173D, 0.112D, 1.680D, 0.181D, 0xFF8D3BE8);
+        box(out, t, -0.098D, 1.660D, 0.181D, -0.055D, 1.670D, 0.184D, 0xFFE7B5FF);
+        box(out, t, 0.055D, 1.660D, 0.181D, 0.098D, 1.670D, 0.184D, 0xFFE7B5FF);
 
-        // A narrow glowing mouth and small metal clasps at the temples.
-        box(out, t, -0.105D, 1.485D, 0.282D, 0.105D, 1.505D, 0.299D, 0xFFB84CFF);
-        box(out, t, -0.17D, 1.535D, 0.22D, -0.148D, 1.572D, 0.245D, 0xFFC4BFD0);
-        box(out, t, 0.148D, 1.535D, 0.22D, 0.17D, 1.572D, 0.245D, 0xFFC4BFD0);
+        // A small nose ridge and tapered lower face give the mask a fitted silhouette.
+        box(out, t, -0.023D, 1.605D, 0.174D, 0.023D, 1.655D, 0.190D, 0xFFAAA2B0);
+        box(out, t, -0.095D, 1.525D, 0.151D, 0.095D, 1.565D, 0.176D, 0xFF292631);
+        box(out, t, -0.060D, 1.535D, 0.177D, 0.060D, 1.545D, 0.183D, 0xFFB34BEB);
+
+        // Side bands sit against the temples and disappear around the head.
+        box(out, t, -0.175D, 1.555D, 0.015D, -0.132D, 1.710D, 0.132D, 0xFF292832);
+        box(out, t, 0.132D, 1.555D, 0.015D, 0.175D, 1.710D, 0.132D, 0xFF292832);
+        box(out, t, -0.151D, 1.610D, 0.112D, -0.132D, 1.655D, 0.151D, 0xFFB6AFC1);
+        box(out, t, 0.132D, 1.610D, 0.112D, 0.151D, 1.655D, 0.151D, 0xFFB6AFC1);
     }
 
     private static void renderInvoker(VertexConsumer out, BoardTransform t, long gameTime) {
