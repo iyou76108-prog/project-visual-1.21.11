@@ -4,6 +4,7 @@ import dev.projectvisual.client.hud.VisualHud;
 import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
+import dev.projectvisual.client.gui.SkinManagerScreen;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.Minecraft;
@@ -23,9 +24,9 @@ public final class ClickGuiScreen extends Screen {
         {"Fullbright","Weather","Time Changer","Ambience","Block Overlay","Breadcrumbs"},
         {"Swing Animation","Old Animations","Item Sway","Eating Animation","Rod Animation","Shield Animation"},
         {"View Model","Camera Clip","Zoom","Smooth Camera","Perspective"},
-        {"Notifications","Watermark","Module List","Custom Font","Color Theme"},
+        {"Notifications","Watermark","Module List","Custom Font","Color Theme","Trainer"},
         {"Hitboxes","Chest ESP","Player ESP","Hitbox Visual"},
-        {"Queen Skin","Invoker Skin","Interworlder Mask","Magnus AFK","Axe AFK","Watcher AFK","Skin Manager","Skin Preview","Capes","Outfits"}
+        {"Skin"}
     };
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
@@ -34,9 +35,9 @@ public final class ClickGuiScreen extends Screen {
         {"Brighter world","Weather visuals","Local world time","World color mood","Highlight selected blocks","Movement path markers"},
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
         {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
-        {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors"},
+        {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors","PvP quests in the top-right corner"},
         {"Meteor-style player targeting expansion (+0.5)","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
-        {"Turn your avatar into a 3D chess queen","Invoker with three rotating elemental orbs","Wear the glowing Interworlder mask","Magnus Carlsen visits after 30 seconds AFK","Axe rushes in and swings his axe after AFK","The Watcher pulls you toward the void while AFK","Choose player skins","Preview before applying","Cape collection","Saved appearance presets"},
+        {"Open the complete skin library and training cases"},
     };
     private int category=0, rightTab=-1, scroll=0;
     private static int language=0;
@@ -117,11 +118,11 @@ public final class ClickGuiScreen extends Screen {
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
                 boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
-                boolean active = VisualFeatures.isEnabled(names[n]);
+                boolean active = names[n].equals("Skin") || VisualFeatures.isEnabled(names[n]);
                 g.fill(cx,cy,cx+2,cy+48,active?VisualFeatures.accentColor():0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
-                String state = active ? "ON" : "OFF";
+                String state = names[n].equals("Skin") ? "OPEN" : active ? "ON" : "OFF";
                 g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:MUTED,false);
             }
         }
