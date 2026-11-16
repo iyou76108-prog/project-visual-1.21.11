@@ -64,6 +64,12 @@ public final class TrainingManager {
         }
 
         float currentHealth = trackedTarget.getHealth();
+        if (trackedTarget.getLastHurtByMob() != client.player) {
+            targetHealth = currentHealth;
+            trackedAttackTicks--;
+            if (trackedAttackTicks <= 0) clearTrackedTarget();
+            return;
+        }
         double dealt = targetHealth - currentHealth;
         if (dealt > 0.001D) {
             recordDamage(dealt, trackedAttackWasMace);
