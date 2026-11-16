@@ -16,7 +16,10 @@ public abstract class EntityHitboxMixin {
     private void projectvisual$playerEsp(CallbackInfoReturnable<Boolean> cir) {
         if (VisualFeatures.isPlayerEsp()
                 && (Object) this instanceof Player player
-                && player != Minecraft.getInstance().player) {
+                && player != Minecraft.getInstance().player
+                && Minecraft.getInstance().player != null
+                && Minecraft.getInstance().player.distanceToSqr(player)
+                    <= VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) {
             cir.setReturnValue(true);
         }
     }
