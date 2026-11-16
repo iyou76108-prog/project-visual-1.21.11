@@ -31,11 +31,11 @@ public final class ClickGuiScreen extends Screen {
     private static final String[][] DESC={
         {"Performance counter","Connection latency","Clicks per second","Movement key display","Equipment durability","Active potion effects","Target information","Enabled module list"},
         {"Particles on confirmed hurt event","Screen-edge flash on damage","Green feedback on entity target","Replaces vanilla crosshair","Target name, health, armor and distance","Inventory count and pop counter"},
-        {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","Hand appearance","Cape visuals"},
+        {"Hat above player","Colored movement traces","Custom name labels","Dropped item rotation","В разработке — нет рендера","В разработке — нет рендера"},
         {"Brighter world","Weather visuals","Local world time","World color mood","Highlight selected blocks","Movement path markers"},
         {"Custom hand swing","Classic item animations","Subtle item movement","Food and drink motion","Fishing rod animation","Shield raise animation"},
-        {"Hand position and scale","Camera collision options","Quick zoom control","Smoother camera motion","Third-person perspective"},
-        {"On-screen alerts","Client branding","Visible enabled modules","Typography settings","Accent colors","PvP quests in the top-right corner"},
+        {"Hand position and scale","Временно отключено: hook 1.21.11 изменился","Quick zoom control","Smoother camera motion","В разработке"},
+        {"On-screen alerts","Client branding","Visible enabled modules","В разработке","Accent colors","PvP quests in the top-right corner"},
         {"Meteor-style player targeting expansion (+0.5)","See chests and containers through walls","Outline nearby players","Visual-only player hitbox outline"},
         {"Open the complete skin library and training cases"},
     };
@@ -118,12 +118,13 @@ public final class ClickGuiScreen extends Screen {
                 int col=(n-start)%2,row=(n-start)/2,cx=mainX+col*(cardW+12),cy=y+74+row*58;
                 boolean hover=mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48;
                 g.fill(cx,cy,cx+cardW,cy+48,hover?HOVER:CARD);
-                boolean active = names[n].equals("Skin") || VisualFeatures.isEnabled(names[n]);
+                boolean available = isModuleAvailable(names[n]);
+                boolean active = names[n].equals("Skin") || (available && VisualFeatures.isEnabled(names[n]));
                 g.fill(cx,cy,cx+2,cy+48,active?VisualFeatures.accentColor():0xFF45495A);
                 g.drawString(font,names[n],cx+10,cy+7,TEXT,false);
                 g.drawString(font,descriptions[n],cx+10,cy+23,MUTED,false);
-                String state = names[n].equals("Skin") ? "OPEN" : active ? "ON" : "OFF";
-                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,active?0xFF83E0B0:MUTED,false);
+                String state = names[n].equals("Skin") ? "OPEN" : !available ? "SOON" : active ? "ON" : "OFF";
+                g.drawString(font,state,cx+cardW-font.width(state)-8,cy+7,!available?0xFFD7A85D:active?0xFF83E0B0:MUTED,false);
             }
         }
         g.drawString(font,"RIGHT SHIFT  /  ESC",x+16,y+ph-23,MUTED,false);
@@ -180,6 +181,12 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
+    private static boolean isModuleAvailable(String module) {
+        return !module.equals("Hand Cosmetics") && !module.equals("Cape Effects")
+                && !module.equals("Camera Clip") && !module.equals("Perspective")
+                && !module.equals("Custom Font");
+    }
+
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean dbl){
         if(e.button()!=0)return super.mouseClicked(e,dbl);
         double mx=e.x(),my=e.y(); int pw=Math.min(1000,width-24),ph=Math.min(540,height-24);
@@ -225,6 +232,11 @@ public final class ClickGuiScreen extends Screen {
                 int cx=mainX+col*(cardW+12),cy=y+74+row*58;
                 if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
                     String module=names[n];
+                    if(!isModuleAvailable(module)){
+                        Minecraft.getInstance().player.displayClientMessage(
+                                Component.literal("§eЭтот модуль пока в разработке."), true);
+                        return true;
+                    }
                     if(module.equals("Skin")){
                         Minecraft.getInstance().setScreen(new SkinManagerScreen());
                         return true;
