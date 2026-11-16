@@ -263,11 +263,29 @@ public final class VisualHud {
                     && entityHit.getEntity().isAlive()) {
                 color = 0xFF58E6A0;
             }
-            g.fill(cx - 1, cy - 7, cx + 1, cy - 3, color);
-            g.fill(cx - 1, cy + 3, cx + 1, cy + 7, color);
-            g.fill(cx - 7, cy - 1, cx - 3, cy + 1, color);
-            g.fill(cx + 3, cy - 1, cx + 7, cy + 1, color);
-            g.fill(cx - 1, cy - 1, cx + 1, cy + 1, color);
+            int unit = Math.max(1, Math.round(VisualFeatures.crosshairSize()));
+            if (VisualFeatures.crosshairStyle() == 0) {
+                int arm = 7 * unit;
+                int gap = 3 * unit;
+                g.fill(cx - unit, cy - arm, cx + unit, cy - gap, color);
+                g.fill(cx - unit, cy + gap, cx + unit, cy + arm, color);
+                g.fill(cx - arm, cy - unit, cx - gap, cy + unit, color);
+                g.fill(cx + gap, cy - unit, cx + arm, cy + unit, color);
+                g.fill(cx - unit, cy - unit, cx + unit, cy + unit, color);
+            } else if (VisualFeatures.crosshairStyle() == 1) {
+                for (int i = 0; i < 6 * unit; i += unit) {
+                    g.fill(cx - 6 * unit + i, cy - 6 * unit + i,
+                            cx - 5 * unit + i, cy - 5 * unit + i, color);
+                    g.fill(cx + 5 * unit - i, cy - 6 * unit + i,
+                            cx + 6 * unit - i, cy - 5 * unit + i, color);
+                    g.fill(cx - 6 * unit + i, cy + 5 * unit - i,
+                            cx - 5 * unit + i, cy + 6 * unit - i, color);
+                    g.fill(cx + 5 * unit - i, cy + 5 * unit - i,
+                            cx + 6 * unit - i, cy + 6 * unit - i, color);
+                }
+            } else {
+                g.fill(cx - 2 * unit, cy - 2 * unit, cx + 2 * unit, cy + 2 * unit, color);
+            }
         }
 
         if (VisualFeatures.isEnabled("Notifications")) {
