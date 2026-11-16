@@ -19,6 +19,7 @@ public final class ModuleSettingsScreen extends Screen {
 
     private final String module;
     private final int returnCategory;
+    private int activeSliderRow = -1;
 
     public ModuleSettingsScreen(String module, int returnCategory) {
         super(Component.literal("PROJECT VISUAL — " + module));
@@ -280,15 +281,44 @@ public final class ModuleSettingsScreen extends Screen {
                     || event.y() < y || event.y() > y + 45) continue;
             Row row = rows.get(i);
             if (isSlider(row.type())) {
-                int sx = px + 31;
-                int sw = panelW - 62;
-                setSlider(row.type(), (float) ((event.x() - sx) / sw));
+                if (event.y() < y + 23 || event.y() > y + 40) return true;
+                activeSliderRow = i;
+                updateSliderFromMouse(row.type(), event.x(), px, panelW);
             } else {
+                activeSliderRow = -1;
                 activate(row.type());
             }
             return true;
         }
         return true;
+    }
+
+    private void updateSliderFromMouse(RowType type, double mouseX, int panelX, int panelW) {
+        int sx = panelX + 31;
+        int sw = panelW - 62;
+        setSlider(type, (float) ((mouseX - sx) / sw));
+    }
+
+    @Override
+    public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
+        if (event.button() != 0 || activeSliderRow < 0) {
+            return super.mouseDragged(event, dragX, dragY);
+        }
+        int panelW = Math.min(650, width - 28);
+        int px = (width - panelW) / 2;
+        List<Row> currentRows = rows();
+        if (activeSliderRow >= currentRows.size()) {
+            activeSliderRow = -1;
+            return false;
+        }
+        updateSliderFromMouse(currentRows.get(activeSliderRow).type(), event.x(), px, panelW);
+        return true;
+    }
+
+    @Override
+    public boolean mouseReleased(MouseButtonEvent event) {
+        if (event.button() == 0) activeSliderRow = -1;
+        return super.mouseReleased(event);
     }
 
     @Override
