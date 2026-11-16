@@ -193,6 +193,10 @@ public final class SkinManagerScreen extends Screen {
 
     @Override
     public void onClose() {
+        if (caseReward != null && !rewardGranted) {
+            TrainingManager.unlockSkin(caseReward);
+            rewardGranted = true;
+        }
         Minecraft.getInstance().setScreen(new ClickGuiScreen());
     }
 
