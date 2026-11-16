@@ -26,7 +26,7 @@ public abstract class FirstPersonVisualMixin {
 
         if (VisualFeatures.isEnabled("View Model")) {
             matrices.translate(side * 0.045D, -0.025D, 0.035D);
-            matrices.scale(0.93F, 0.93F, 0.93F);
+            matrices.scale(VisualFeatures.viewModelScale(), VisualFeatures.viewModelScale(), VisualFeatures.viewModelScale());
         }
 
         if (VisualFeatures.isEnabled("Old Animations")) {
