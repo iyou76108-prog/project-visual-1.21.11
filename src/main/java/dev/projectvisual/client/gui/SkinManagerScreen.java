@@ -210,8 +210,13 @@ public final class SkinManagerScreen extends Screen {
         if (caseReward != null && !rewardGranted) {
             TrainingManager.unlockSkin(caseReward);
             rewardGranted = true;
+            Minecraft mc = Minecraft.getInstance();
+            if (mc.player != null) {
+                mc.player.displayClientMessage(Component.literal("§6КЕЙС §fНаграда сохранена: §e"
+                        + TrainingManager.getSkinDisplayName(caseReward)), false);
+            }
         }
-        Minecraft.getInstance().setScreen(new ClickGuiScreen());
+        Minecraft.getInstance().setScreen(new ClickGuiScreen(8));
     }
 
     private record SkinOption(String id, String title, String description) {}
