@@ -1,7 +1,10 @@
 package dev.projectvisual.client.account;
 
+import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import dev.projectvisual.client.VisualFeatures;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.client.Minecraft;
 
@@ -16,13 +19,24 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Locale;
+import java.util.Map;
 import java.util.Properties;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
 public final class ProjectVisualApiClient {
     private static final HttpClient HTTP = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(8)).build();
+    private static final Map<String, String> REMOTE_SKINS = new ConcurrentHashMap<>();
+    private static final String[] COSMETIC_MODULES = {
+            "Queen Skin", "Invoker Skin", "Interworlder Mask", "Guts", "Akashi Seijuro",
+            "Dual Blades", "Flying Spellbook", "Pencil Sword", "Divine Rapier",
+            "Hand Cosmetics", "Cape Effects"
+    };
     private static String apiToken;
+    private static int syncTicks;
+    private static String lastAppliedSkin = "";
 
     private ProjectVisualApiClient() {}
 
@@ -36,29 +50,82 @@ public final class ProjectVisualApiClient {
         }
     }
 
+    public static void register() {
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            if (!isLoggedIn() || client.player == null || client.level == null) {
+                syncTicks = 0;
+                return;
+            }
+            if (++syncTicks < 200) return;
+            syncTicks = 0;
+            request("POST", "/api/minecraft/presence", "{}", ignored -> {});
+            request("GET", "/api/minecraft/players", null, ProjectVisualApiClient::updateRemotePlayers);
+            request("GET", "/api/minecraft/me", null, ProjectVisualApiClient::updateOwnSkin);
+        });
+    }
+
     public static boolean isLoggedIn() {
         return apiToken != null && !apiToken.isBlank();
     }
 
     public static void logout() {
         apiToken = "";
+        REMOTE_SKINS.clear();
+        lastAppliedSkin = "";
         saveToken();
     }
 
+    public static String remoteSkinFor(String playerName) {
+        if (playerName == null) return null;
+        return REMOTE_SKINS.get(playerName.toLowerCase(Locale.ROOT));
+    }
+
+    private static void updateRemotePlayers(String body) {
+        try {
+            JsonObject root = JsonParser.parseString(body).getAsJsonObject();
+            JsonArray players = root.getAsJsonArray("players");
+            REMOTE_SKINS.clear();
+            if (players == null) return;
+            for (var element : players) {
+                JsonObject player = element.getAsJsonObject();
+                if (!player.has("username") || player.get("username").isJsonNull()) continue;
+                if (!player.has("equippedSkin") || player.get("equippedSkin").isJsonNull()) continue;
+                String name = player.get("username").getAsString().toLowerCase(Locale.ROOT);
+                String skin = player.get("equippedSkin").getAsString();
+                if (!skin.isBlank()) REMOTE_SKINS.put(name, skin);
+            }
+        } catch (RuntimeException ignored) {
+            // Keep the previous remote cosmetic cache if a response is incomplete.
+        }
+    }
+
+    private static void updateOwnSkin(String body) {
+        try {
+            JsonObject root = JsonParser.parseString(body).getAsJsonObject();
+            JsonObject user = root.getAsJsonObject("user");
+            if (user == null || !user.has("equippedSkin") || user.get("equippedSkin").isJsonNull()) return;
+            String skin = user.get("equippedSkin").getAsString();
+            if (skin.equals(lastAppliedSkin)) return;
+            lastAppliedSkin = skin;
+            for (String module : COSMETIC_MODULES) VisualFeatures.setEnabled(module, module.equals(skin));
+        } catch (RuntimeException ignored) {
+            // Local cosmetics stay as-is if the website is temporarily unreachable.
+        }
+    }
+
     public static void pairWithWebsite(String code, Consumer<String> callback) {
-        String clean = code == null ? "" : code.replaceAll("[^A-Za-z0-9-]", "").toUpperCase(java.util.Locale.ROOT);
+        String clean = code == null ? "" : code.replaceAll("[^A-Za-z0-9-]", "")
+                .toUpperCase(Locale.ROOT);
         if (clean.length() < 6 || clean.length() > 12) {
             callback.accept("Введи код подключения с сайта.");
             return;
         }
-
         String body = "{\"code\":\"" + clean + "\"}";
         HttpRequest request = HttpRequest.newBuilder(apiUri("/api/minecraft/pair"))
                 .timeout(Duration.ofSeconds(12))
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body))
                 .build();
-
         HTTP.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, error) -> Minecraft.getInstance().execute(() -> {
                     if (error != null) {
@@ -74,28 +141,87 @@ public final class ProjectVisualApiClient {
                         }
                         apiToken = json.get("accessToken").getAsString();
                         saveToken();
-                        String username = json.has("username") ? json.get("username").getAsString() : "аккаунт";
-                        callback.accept("Вход выполнен: " + username);
+                        lastAppliedSkin = "";
+                        callback.accept("Вход выполнен: " + json.get("username").getAsString());
+                        syncTicks = 199;
                     } catch (RuntimeException parseError) {
                         callback.accept("Сайт вернул некорректный ответ.");
                     }
                 }));
     }
 
-    public static void getFriends(Consumer<String> callback) {
+    public static void request(String method, String path, String jsonBody, Consumer<String> callback) {
         if (!isLoggedIn()) {
-            callback.accept("Сначала подключи аккаунт: /pv login");
+            Minecraft.getInstance().execute(() -> callback.accept("{\"error\":\"Сначала подключи аккаунт: /pv login\"}"));
             return;
         }
-        HttpRequest request = HttpRequest.newBuilder(apiUri("/api/minecraft/friends"))
-                .timeout(Duration.ofSeconds(10))
-                .header("Authorization", "Bearer " + apiToken)
-                .GET().build();
-        HTTP.sendAsync(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
+        HttpRequest.Builder builder = HttpRequest.newBuilder(apiUri(path))
+                .timeout(Duration.ofSeconds(12))
+                .header("Authorization", "Bearer " + apiToken);
+        if (jsonBody != null) {
+            builder.header("Content-Type", "application/json")
+                    .method(method, HttpRequest.BodyPublishers.ofString(jsonBody));
+        } else {
+            builder.method(method, HttpRequest.BodyPublishers.noBody());
+        }
+        HTTP.sendAsync(builder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8))
                 .whenComplete((response, error) -> Minecraft.getInstance().execute(() -> {
-                    if (error != null) callback.accept("Ошибка сети: " + error.getMessage());
-                    else callback.accept(response.body());
+                    if (error != null) {
+                        callback.accept("{\"error\":\"Ошибка сети: " + escapeJson(error.getMessage()) + "\"}");
+                    } else {
+                        callback.accept(response.body());
+                    }
                 }));
+    }
+
+    public static void getFriends(Consumer<String> callback) {
+        request("GET", "/api/minecraft/friends", null, callback);
+    }
+
+    public static void addFriend(String username, Consumer<String> callback) {
+        request("POST", "/api/minecraft/friends", "{\"username\":\"" + escapeJson(username) + "\"}", callback);
+    }
+
+    public static void respondToFriendRequest(String requestId, boolean accept, Consumer<String> callback) {
+        request("PATCH", "/api/minecraft/friends",
+                "{\"requestId\":\"" + escapeJson(requestId) + "\",\"action\":\""
+                        + (accept ? "accept" : "decline") + "\"}", callback);
+    }
+
+    public static void getGames(Consumer<String> callback) {
+        request("GET", "/api/minecraft/games", null, callback);
+    }
+
+    public static void createGame(String username, String type, Consumer<String> callback) {
+        request("POST", "/api/minecraft/games",
+                "{\"username\":\"" + escapeJson(username) + "\",\"type\":\"" + type + "\"}", callback);
+    }
+
+    public static void acceptGame(String gameId, Consumer<String> callback) {
+        request("POST", "/api/minecraft/games/" + gameId + "/accept", "{}", callback);
+    }
+
+    public static void getGame(String gameId, Consumer<String> callback) {
+        request("GET", "/api/minecraft/games/" + gameId, null, callback);
+    }
+
+    public static void submitTicTacToeMove(String gameId, int index, int version, Consumer<String> callback) {
+        request("POST", "/api/minecraft/games/" + gameId + "/move",
+                "{\"index\":" + index + ",\"version\":" + version + "}", callback);
+    }
+
+    public static void submitChessMove(String gameId, String from, String to, char promotion,
+                                       int version, Consumer<String> callback) {
+        String suffix = promotion == 0 ? "" : ",\"promotion\":\"" + Character.toLowerCase(promotion) + "\"";
+        request("POST", "/api/minecraft/games/" + gameId + "/move",
+                "{\"from\":\"" + from + "\",\"to\":\"" + to + "\""
+                        + suffix + ",\"version\":" + version + "}", callback);
+    }
+
+    private static String escapeJson(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"")
+                .replace("\n", "\\n").replace("\r", "\\r");
     }
 
     private static URI apiUri(String path) {
