@@ -177,6 +177,14 @@ public final class ChessWorldGame {
         return afkSceneType == 3 && afkSceneTick >= WATCHER_SUCK_TICK;
     }
 
+    /** True when a full replacement avatar is being rendered by the custom mesh pass. */
+    public static boolean shouldHidePlayerModel() {
+        return VisualFeatures.isEnabled("Queen Skin")
+                || VisualFeatures.isEnabled("Invoker Skin")
+                || VisualFeatures.isEnabled("Guts")
+                || VisualFeatures.isEnabled("Akashi Seijuro");
+    }
+
     public static void stop() {
         active = false;
         selectedSquare = -1;
@@ -687,16 +695,19 @@ public final class ChessWorldGame {
 
     private static void renderChessCosmetics(WorldRenderContext context, Minecraft client, Vec3 camera) {
         boolean thirdPerson = !client.options.getCameraType().isFirstPerson();
-        boolean queenSkin = VisualFeatures.isEnabled("Queen Skin")
-                && thirdPerson && client.player.isAlive();
-        boolean invokerSkin = VisualFeatures.isEnabled("Invoker Skin")
-                && thirdPerson && client.player.isAlive();
-        boolean interworlderMask = VisualFeatures.isEnabled("Interworlder Mask")
-                && thirdPerson && client.player.isAlive();
+        boolean alive = client.player.isAlive();
+        boolean queenSkin = VisualFeatures.isEnabled("Queen Skin") && thirdPerson && alive;
+        boolean invokerSkin = VisualFeatures.isEnabled("Invoker Skin") && thirdPerson && alive;
+        boolean gutsSkin = VisualFeatures.isEnabled("Guts") && thirdPerson && alive;
+        boolean akashiSkin = VisualFeatures.isEnabled("Akashi Seijuro") && thirdPerson && alive;
+        boolean interworlderMask = VisualFeatures.isEnabled("Interworlder Mask") && thirdPerson && alive;
+        boolean dualBlades = VisualFeatures.isEnabled("Dual Blades") && thirdPerson && alive;
+        boolean flyingSpellbook = VisualFeatures.isEnabled("Flying Spellbook") && thirdPerson && alive;
         boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
         boolean axeScene = afkSceneType == 2 && afkSceneTick >= 0;
         boolean watcherScene = afkSceneType == 3 && afkSceneTick >= 0;
-        if (!queenSkin && !invokerSkin && !interworlderMask && !magnusScene && !axeScene && !watcherScene) return;
+        if (!queenSkin && !invokerSkin && !gutsSkin && !akashiSkin && !interworlderMask
+                && !dualBlades && !flyingSpellbook && !magnusScene && !axeScene && !watcherScene) return;
 
         VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
 
@@ -706,12 +717,26 @@ public final class ChessWorldGame {
         Vec3 relative = client.player.position().subtract(camera);
 
         // Invoker takes priority if both persisted toggles were enabled before this version.
+        long gameTime = client.level.getGameTime();
         if (invokerSkin) {
             BoardTransform invokerTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
-            renderInvoker(out, invokerTransform, client.level.getGameTime());
+            renderInvoker(out, invokerTransform, gameTime);
         } else if (queenSkin) {
             BoardTransform queenTransform = new BoardTransform(relative, playerRight, playerForward, 2.85F, 0.0D);
             renderPiece(out, queenTransform, 0.0F, 0.0F, 'Q', 0.0F);
+        } else if (gutsSkin) {
+            BoardTransform gutsTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            renderGuts(out, gutsTransform);
+        } else if (akashiSkin) {
+            BoardTransform akashiTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            renderAkashi(out, akashiTransform);
+        }
+        if (dualBlades) {
+            BoardTransform bladesTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            renderDualBlades(out, bladesTransform);
+        }
+        if (flyingSpellbook) {
+            renderFlyingSpellbook(out, relative, playerRight, playerForward, gameTime);
         }
         if (interworlderMask) {
             BoardTransform maskTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
@@ -804,6 +829,144 @@ public final class ChessWorldGame {
         box(out, t, 0.132D, 1.555D, 0.015D, 0.175D, 1.710D, 0.132D, 0xFF292832);
         box(out, t, -0.151D, 1.610D, 0.112D, -0.132D, 1.655D, 0.151D, 0xFFB6AFC1);
         box(out, t, 0.132D, 1.610D, 0.112D, 0.151D, 1.655D, 0.151D, 0xFFB6AFC1);
+    }
+
+    private static void renderGuts(VertexConsumer out, BoardTransform t) {
+        // Original low-poly dark swordsman: layered black armor, cape, metal arm and massive blade.
+        box(out, t, -0.29D, 0.70D, -0.12D, 0.29D, 1.39D, 0.16D, 0xFF171922);
+        box(out, t, -0.25D, 0.78D, 0.165D, 0.25D, 1.30D, 0.205D, 0xFF272B35);
+        box(out, t, -0.27D, 1.12D, 0.205D, 0.27D, 1.34D, 0.238D, 0xFF3C414C);
+        box(out, t, -0.19D, 1.00D, 0.24D, 0.19D, 1.16D, 0.258D, 0xFF0D0F16);
+        box(out, t, -0.12D, 0.86D, 0.26D, 0.12D, 0.91D, 0.275D, 0xFFB18A45);
+        box(out, t, -0.28D, 0.16D, -0.10D, -0.025D, 0.76D, 0.13D, 0xFF151720);
+        box(out, t, 0.025D, 0.16D, -0.10D, 0.28D, 0.76D, 0.13D, 0xFF191B25);
+        box(out, t, -0.31D, 0.05D, 0.04D, -0.01D, 0.20D, 0.27D, 0xFF080A10);
+        box(out, t, 0.01D, 0.05D, 0.04D, 0.31D, 0.20D, 0.27D, 0xFF080A10);
+
+        // Heavy shoulder guards and an asymmetric metal prosthetic arm.
+        sphere(out, t, -0.30D, 1.30D, 0.02D, 0.19D, 0xFF343946, 10, 7);
+        sphere(out, t, 0.30D, 1.30D, 0.02D, 0.18D, 0xFF454B59, 10, 7);
+        renderLimb(out, t, new Vec3(-0.29D, 1.27D, 0.03D),
+                new Vec3(-0.42D, 0.95D, 0.18D), 0.105D, 0xFF181B25);
+        renderLimb(out, t, new Vec3(-0.42D, 0.95D, 0.18D),
+                new Vec3(-0.36D, 0.78D, 0.24D), 0.073D, 0xFF292E3A);
+        renderLimb(out, t, new Vec3(0.29D, 1.27D, 0.03D),
+                new Vec3(0.40D, 0.98D, 0.12D), 0.105D, 0xFF6A7180);
+        renderLimb(out, t, new Vec3(0.40D, 0.98D, 0.12D),
+                new Vec3(0.35D, 0.77D, 0.23D), 0.073D, 0xFF9EA6B2);
+        box(out, t, 0.30D, 0.78D, 0.18D, 0.40D, 0.91D, 0.30D, 0xFFD4D8E0);
+        for (int i = 0; i < 3; i++) {
+            box(out, t, 0.305D + i * 0.027D, 0.80D, 0.30D,
+                    0.322D + i * 0.027D, 0.89D, 0.322D, 0xFF596272);
+        }
+
+        // Heavy black cape behind the torso.
+        box(out, t, -0.31D, 0.47D, -0.25D, 0.31D, 1.36D, -0.13D, 0xFF0C0E15);
+        box(out, t, -0.25D, 0.20D, -0.20D, 0.24D, 0.60D, -0.12D, 0xFF11131C);
+        box(out, t, -0.22D, 1.31D, -0.11D, 0.22D, 1.40D, 0.08D, 0xFF555B66);
+
+        // Face and spiky dark hair.
+        sphere(out, t, 0.0D, 1.56D, 0.025D, 0.17D, 0xFFD8B49A, 14, 10);
+        sphere(out, t, 0.0D, 1.68D, -0.015D, 0.19D, 0xFF171923, 14, 8);
+        box(out, t, -0.18D, 1.58D, -0.02D, -0.12D, 1.82D, 0.09D, 0xFF12151E);
+        box(out, t, -0.12D, 1.65D, -0.02D, -0.065D, 1.86D, 0.08D, 0xFF171A24);
+        box(out, t, -0.04D, 1.67D, -0.015D, 0.025D, 1.88D, 0.08D, 0xFF10131C);
+        box(out, t, 0.045D, 1.62D, -0.02D, 0.11D, 1.84D, 0.08D, 0xFF1B1E28);
+        box(out, t, 0.12D, 1.55D, -0.01D, 0.18D, 1.76D, 0.08D, 0xFF131720);
+        box(out, t, -0.078D, 1.56D, 0.175D, -0.02D, 1.575D, 0.19D, 0xFF30282B);
+        box(out, t, 0.02D, 1.56D, 0.175D, 0.078D, 1.575D, 0.19D, 0xFF30282B);
+        box(out, t, -0.035D, 1.51D, 0.175D, 0.035D, 1.525D, 0.19D, 0xFF805C50);
+
+        // Huge worn blade carried along the back, with a visible crossguard and grip.
+        renderLimb(out, t, new Vec3(0.32D, 0.62D, -0.27D),
+                new Vec3(0.52D, 1.95D, -0.30D), 0.095D, 0xFF9DA5B2);
+        renderLimb(out, t, new Vec3(0.30D, 0.51D, -0.25D),
+                new Vec3(0.33D, 0.69D, -0.27D), 0.045D, 0xFF3A2D2B);
+        box(out, t, 0.19D, 0.70D, -0.34D, 0.47D, 0.75D, -0.24D, 0xFFB5BBC3);
+        box(out, t, 0.43D, 1.82D, -0.33D, 0.60D, 1.89D, -0.25D, 0xFFD5D9DF);
+    }
+
+    private static void renderAkashi(VertexConsumer out, BoardTransform t) {
+        // Original low-poly basketball uniform and red-haired face inspired by Akashi's look.
+        box(out, t, -0.23D, 0.79D, -0.12D, 0.23D, 1.39D, 0.15D, 0xFFF2F0EA);
+        box(out, t, -0.23D, 0.81D, 0.153D, 0.23D, 1.36D, 0.179D, 0xFFEEECE6);
+        box(out, t, -0.245D, 1.29D, 0.18D, -0.19D, 1.37D, 0.205D, 0xFFC82F4D);
+        box(out, t, 0.19D, 1.29D, 0.18D, 0.245D, 1.37D, 0.205D, 0xFFC82F4D);
+        box(out, t, -0.13D, 0.87D, 0.18D, 0.13D, 1.30D, 0.21D, 0xFFCE344D);
+        box(out, t, -0.08D, 0.88D, 0.213D, 0.08D, 1.25D, 0.228D, 0xFFFFF4E9);
+        box(out, t, -0.12D, 0.78D, -0.08D, 0.12D, 0.88D, 0.16D, 0xFFB62A43);
+        box(out, t, -0.21D, 0.19D, -0.09D, -0.015D, 0.77D, 0.12D, 0xFF292C37);
+        box(out, t, 0.015D, 0.19D, -0.09D, 0.21D, 0.77D, 0.12D, 0xFF292C37);
+        box(out, t, -0.22D, 0.06D, 0.02D, -0.01D, 0.20D, 0.25D, 0xFFEEECE6);
+        box(out, t, 0.01D, 0.06D, 0.02D, 0.22D, 0.20D, 0.25D, 0xFFEEECE6);
+
+        renderLimb(out, t, new Vec3(-0.24D, 1.30D, 0.02D),
+                new Vec3(-0.34D, 1.02D, 0.22D), 0.075D, 0xFFE7C1A8);
+        renderLimb(out, t, new Vec3(-0.34D, 1.02D, 0.22D),
+                new Vec3(-0.30D, 0.84D, 0.30D), 0.060D, 0xFFE7C1A8);
+        renderLimb(out, t, new Vec3(0.24D, 1.30D, 0.02D),
+                new Vec3(0.34D, 1.02D, 0.22D), 0.075D, 0xFFE7C1A8);
+        renderLimb(out, t, new Vec3(0.34D, 1.02D, 0.22D),
+                new Vec3(0.30D, 0.84D, 0.30D), 0.060D, 0xFFE7C1A8);
+        box(out, t, -0.25D, 1.29D, 0.04D, -0.14D, 1.36D, 0.22D, 0xFFCE344D);
+        box(out, t, 0.14D, 1.29D, 0.04D, 0.25D, 1.36D, 0.22D, 0xFFCE344D);
+
+        sphere(out, t, 0.0D, 1.56D, 0.02D, 0.17D, 0xFFF0CBB3, 14, 10);
+        sphere(out, t, 0.0D, 1.68D, -0.01D, 0.19D, 0xFFB72C4D, 14, 8);
+        box(out, t, -0.18D, 1.56D, -0.02D, -0.12D, 1.79D, 0.09D, 0xFFB72C4D);
+        box(out, t, -0.12D, 1.66D, -0.02D, -0.055D, 1.84D, 0.08D, 0xFFCC3C5B);
+        box(out, t, -0.04D, 1.68D, -0.015D, 0.025D, 1.87D, 0.08D, 0xFFA92243);
+        box(out, t, 0.045D, 1.64D, -0.02D, 0.11D, 1.83D, 0.08D, 0xFFCE3D5B);
+        box(out, t, 0.12D, 1.56D, -0.01D, 0.18D, 1.77D, 0.08D, 0xFFB72C4D);
+        box(out, t, -0.085D, 1.565D, 0.17D, -0.025D, 1.58D, 0.19D, 0xFFB11F36);
+        box(out, t, 0.025D, 1.565D, 0.17D, 0.085D, 1.58D, 0.19D, 0xFFB11F36);
+        box(out, t, -0.025D, 1.51D, 0.175D, 0.025D, 1.525D, 0.19D, 0xFFD1A18D);
+
+        // White jersey number panel and a small red neck trim.
+        box(out, t, -0.09D, 1.05D, 0.231D, 0.09D, 1.23D, 0.241D, 0xFFFFF8ED);
+        box(out, t, -0.045D, 1.09D, 0.244D, 0.045D, 1.20D, 0.249D, 0xFFC82F4D);
+    }
+
+    private static void renderDualBlades(VertexConsumer out, BoardTransform t) {
+        // Twin slim swords are attached to both hands; the vanilla avatar remains visible.
+        for (int side : new int[]{-1, 1}) {
+            double x = side * 0.38D;
+            Vec3 hand = new Vec3(x, 0.86D, 0.27D);
+            Vec3 guard = new Vec3(x + side * 0.015D, 0.97D, 0.30D);
+            Vec3 tip = new Vec3(x + side * 0.13D, 1.82D, 0.39D);
+            renderLimb(out, t, hand, guard, 0.035D, 0xFF3C3030);
+            box(out, t, x - 0.12D, 0.94D, 0.25D, x + 0.12D, 0.99D, 0.34D, 0xFFD0AD67);
+            renderLimb(out, t, guard, tip, 0.050D, 0xFFB9C5D5);
+            renderLimb(out, t, guard.add(0.0D, 0.015D, 0.018D),
+                    tip.add(0.0D, -0.015D, 0.018D), 0.016D, 0xFFF5F8FF);
+        }
+    }
+
+    private static void renderFlyingSpellbook(VertexConsumer out, Vec3 relative,
+                                               Vec3 playerRight, Vec3 playerForward, long gameTime) {
+        double orbit = gameTime * 0.035D;
+        double bob = Math.sin(gameTime * 0.09D) * 0.055D;
+        Vec3 position = relative.add(playerRight.scale(-0.52D + Math.cos(orbit) * 0.045D))
+                .add(0.0D, 1.38D + bob, 0.0D)
+                .add(playerForward.scale(0.24D + Math.sin(orbit) * 0.035D));
+        double angle = Math.sin(orbit * 0.42D) * 0.16D;
+        Vec3 bookRight = playerRight.scale(Math.cos(angle)).add(playerForward.scale(Math.sin(angle))).normalize();
+        Vec3 bookForward = playerForward.scale(Math.cos(angle)).subtract(playerRight.scale(Math.sin(angle))).normalize();
+        BoardTransform book = new BoardTransform(position, bookRight, bookForward, 0.82F, 0.0D);
+
+        // Floating grimoire with a thick leather cover, parchment pages and gold corners.
+        box(out, book, -0.22D, -0.27D, -0.045D, 0.22D, 0.27D, 0.045D, 0xFF21162F);
+        box(out, book, -0.195D, -0.245D, 0.047D, 0.195D, 0.245D, 0.066D, 0xFF67418E);
+        box(out, book, -0.165D, -0.218D, 0.067D, 0.165D, 0.218D, 0.078D, 0xFFE8D8B2);
+        box(out, book, -0.025D, -0.245D, 0.079D, 0.025D, 0.245D, 0.091D, 0xFFB78A4D);
+        box(out, book, -0.20D, 0.205D, 0.069D, -0.145D, 0.25D, 0.093D, 0xFFFFD889);
+        box(out, book, 0.145D, 0.205D, 0.069D, 0.20D, 0.25D, 0.093D, 0xFFFFD889);
+        box(out, book, -0.20D, -0.25D, 0.069D, -0.145D, -0.205D, 0.093D, 0xFFFFD889);
+        box(out, book, 0.145D, -0.25D, 0.069D, 0.20D, -0.205D, 0.093D, 0xFFFFD889);
+        sphere(out, book, 0.0D, 0.0D, 0.105D, 0.085D, 0xFFB66BFF, 12, 8);
+        sphere(out, book, 0.0D, 0.0D, 0.16D, 0.035D, 0xFFFFE7A8, 10, 7);
+        box(out, book, -0.125D, -0.15D, 0.092D, -0.055D, -0.14D, 0.10D, 0xFF8A6E4D);
+        box(out, book, 0.055D, 0.14D, 0.092D, 0.13D, 0.15D, 0.10D, 0xFF8A6E4D);
     }
 
     private static void renderInvoker(VertexConsumer out, BoardTransform t, long gameTime) {
