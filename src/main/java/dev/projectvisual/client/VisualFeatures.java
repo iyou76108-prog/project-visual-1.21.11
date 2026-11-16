@@ -23,6 +23,13 @@ public final class VisualFeatures {
     private static int swingStyle = 1;
     private static float swingStrength = 1.0F;
     private static int perspectiveMode;
+    private static float zoomScale = 0.25F;
+    private static int espDistance = 64;
+    private static int chestEspRadius = 24;
+    private static float chinaHatSize = 1.0F;
+    private static float viewModelScale = 0.93F;
+    private static float crosshairSize = 1.0F;
+    private static int crosshairStyle;
 
     static {
         String[] modules = {
@@ -182,6 +189,48 @@ public final class VisualFeatures {
         saveConfig();
     }
 
+    public static float zoomScale() { return zoomScale; }
+    public static void setZoomScale(float value) {
+        zoomScale = Math.max(0.1F, Math.min(0.75F, value));
+        saveConfig();
+    }
+
+    public static int espDistance() { return espDistance; }
+    public static void setEspDistance(int value) {
+        espDistance = Math.max(8, Math.min(128, value));
+        saveConfig();
+    }
+
+    public static int chestEspRadius() { return chestEspRadius; }
+    public static void setChestEspRadius(int value) {
+        chestEspRadius = Math.max(8, Math.min(48, value));
+        saveConfig();
+    }
+
+    public static float chinaHatSize() { return chinaHatSize; }
+    public static void setChinaHatSize(float value) {
+        chinaHatSize = Math.max(0.5F, Math.min(1.75F, value));
+        saveConfig();
+    }
+
+    public static float viewModelScale() { return viewModelScale; }
+    public static void setViewModelScale(float value) {
+        viewModelScale = Math.max(0.5F, Math.min(1.5F, value));
+        saveConfig();
+    }
+
+    public static float crosshairSize() { return crosshairSize; }
+    public static void setCrosshairSize(float value) {
+        crosshairSize = Math.max(0.5F, Math.min(2.0F, value));
+        saveConfig();
+    }
+
+    public static int crosshairStyle() { return crosshairStyle; }
+    public static void cycleCrosshairStyle() {
+        crosshairStyle = (crosshairStyle + 1) % 3;
+        saveConfig();
+    }
+
 
     private static Path configPath() {
         return FabricLoader.getInstance().getConfigDir().resolve("project_visual_modules.properties");
@@ -208,6 +257,13 @@ public final class VisualFeatures {
             swingStyle = (int) clamp(parseInt(properties, "swingStyle", swingStyle), 0, 3);
             swingStrength = (float) clamp(parseDouble(properties, "swingStrength", swingStrength), 0.2D, 2.0D);
             perspectiveMode = (int) clamp(parseInt(properties, "perspectiveMode", perspectiveMode), 0, 1);
+            zoomScale = (float) clamp(parseDouble(properties, "zoomScale", zoomScale), 0.1D, 0.75D);
+            espDistance = (int) clamp(parseInt(properties, "espDistance", espDistance), 8, 128);
+            chestEspRadius = (int) clamp(parseInt(properties, "chestEspRadius", chestEspRadius), 8, 48);
+            chinaHatSize = (float) clamp(parseDouble(properties, "chinaHatSize", chinaHatSize), 0.5D, 1.75D);
+            viewModelScale = (float) clamp(parseDouble(properties, "viewModelScale", viewModelScale), 0.5D, 1.5D);
+            crosshairSize = (float) clamp(parseDouble(properties, "crosshairSize", crosshairSize), 0.5D, 2.0D);
+            crosshairStyle = (int) clamp(parseInt(properties, "crosshairStyle", crosshairStyle), 0, 2);
         } catch (IOException | NumberFormatException ignored) {
             // Defaults are safe when a damaged config is encountered.
         }
@@ -227,6 +283,13 @@ public final class VisualFeatures {
         properties.setProperty("swingStyle", Integer.toString(swingStyle));
         properties.setProperty("swingStrength", Float.toString(swingStrength));
         properties.setProperty("perspectiveMode", Integer.toString(perspectiveMode));
+        properties.setProperty("zoomScale", Float.toString(zoomScale));
+        properties.setProperty("espDistance", Integer.toString(espDistance));
+        properties.setProperty("chestEspRadius", Integer.toString(chestEspRadius));
+        properties.setProperty("chinaHatSize", Float.toString(chinaHatSize));
+        properties.setProperty("viewModelScale", Float.toString(viewModelScale));
+        properties.setProperty("crosshairSize", Float.toString(crosshairSize));
+        properties.setProperty("crosshairStyle", Integer.toString(crosshairStyle));
         try {
             Path file = configPath();
             Files.createDirectories(file.getParent());
