@@ -19,7 +19,7 @@ public abstract class PlayerNameTagsMixin {
         if (VisualFeatures.isEnabled("Name Tags")
                 && entity instanceof Player
                 && entity != Minecraft.getInstance().player
-                && distanceSquared <= 64.0D * 64.0D) {
+                && distanceSquared <= VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) {
             cir.setReturnValue(true);
         }
     }
