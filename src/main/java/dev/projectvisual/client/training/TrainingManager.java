@@ -99,8 +99,12 @@ public final class TrainingManager {
     }
 
     private static void recordDamage(double amount, boolean mace) {
-        if (mace) addProgress(ProgressType.MACE_DAMAGE, amount);
-        addProgress(ProgressType.PVP_DAMAGE, amount);
+        ProgressType current = activeQuest.type();
+        if (current == ProgressType.MACE_DAMAGE && mace) {
+            addProgress(ProgressType.MACE_DAMAGE, amount);
+        } else if (current == ProgressType.PVP_DAMAGE) {
+            addProgress(ProgressType.PVP_DAMAGE, amount);
+        }
     }
 
     private static void addProgress(ProgressType type, double amount) {
