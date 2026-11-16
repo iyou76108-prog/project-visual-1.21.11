@@ -219,7 +219,7 @@ public final class ModuleSettingsScreen extends Screen {
             case SWING_STRENGTH -> (VisualFeatures.swingStrength() - 0.2F) / 1.8F;
             case ZOOM_SCALE -> (VisualFeatures.zoomScale() - 0.1F) / 0.65F;
             case ESP_DISTANCE -> (VisualFeatures.espDistance() - 8) / 120.0F;
-            case CHEST_RADIUS -> (VisualFeatures.chestEspRadius() - 8) / 40.0F;
+            case CHEST_RADIUS -> (VisualFeatures.chestEspRadius() - 8) / 24.0F;
             case CHINA_HAT_SIZE -> (VisualFeatures.chinaHatSize() - 0.5F) / 1.25F;
             case VIEWMODEL_SCALE -> (VisualFeatures.viewModelScale() - 0.5F) / 1.0F;
             case CROSSHAIR_SIZE -> (VisualFeatures.crosshairSize() - 0.5F) / 1.5F;
@@ -238,7 +238,7 @@ public final class ModuleSettingsScreen extends Screen {
             case SWING_STRENGTH -> VisualFeatures.setSwingStrength(0.2F + value * 1.8F);
             case ZOOM_SCALE -> VisualFeatures.setZoomScale(0.1F + value * 0.65F);
             case ESP_DISTANCE -> VisualFeatures.setEspDistance(Math.round(8 + value * 120));
-            case CHEST_RADIUS -> VisualFeatures.setChestEspRadius(Math.round(8 + value * 40));
+            case CHEST_RADIUS -> VisualFeatures.setChestEspRadius(Math.round(8 + value * 24));
             case CHINA_HAT_SIZE -> VisualFeatures.setChinaHatSize(0.5F + value * 1.25F);
             case VIEWMODEL_SCALE -> VisualFeatures.setViewModelScale(0.5F + value);
             case CROSSHAIR_SIZE -> VisualFeatures.setCrosshairSize(0.5F + value * 1.5F);
