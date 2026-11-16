@@ -6,6 +6,7 @@ import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import dev.projectvisual.client.gui.SkinManagerScreen;
 import dev.projectvisual.client.gui.ModuleSettingsScreen;
+import dev.projectvisual.client.gui.TicTacToeScreen;
 import dev.projectvisual.client.hud.HudWindowManager;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
@@ -43,13 +44,24 @@ public final class ClickGuiScreen extends Screen {
     };
     private int category=0, rightTab=-1, scroll=0;
     private static int language=0;
+    private static boolean secretTabUnlocked;
     private EditBox accentHexBox;
 
     public ClickGuiScreen(){this(0);}
 
     public ClickGuiScreen(int initialCategory){
+        this(initialCategory, -1);
+    }
+
+    public ClickGuiScreen(int initialCategory, int initialRightTab){
         super(Component.literal("PROJECT VISUAL"));
-        this.category = Math.max(0, Math.min(CATS.length - 1, initialCategory));
+        int maxCategory = secretTabUnlocked ? CATS.length - 1 : CATS.length - 2;
+        this.category = Math.max(0, Math.min(maxCategory, initialCategory));
+        this.rightTab = initialRightTab;
+    }
+
+    public static void unlockSecretTab() {
+        secretTabUnlocked = true;
     }
 
     @Override
@@ -77,9 +89,23 @@ public final class ClickGuiScreen extends Screen {
     }
 
     private String tr(String en,String ru,String kk){return language==1?ru:language==2?kk:en;}
-    private String[] categories(){return language==1
-        ?new String[]{"HUD","Бой","Игрок","Мир","Анимации","Камера","Интерфейс","Читы","Скины"}
-        :language==2?new String[]{"HUD","Ұрыс","Ойыншы","Әлем","Анимация","Камера","Интерфейс","Читтер","Скиндер"}:CATS;}
+
+    private String[] categories() {
+        String[] all = language == 1
+                ? new String[]{"HUD","Бой","Игрок","Мир","Анимации","Камера","Интерфейс","Читы","Скины"}
+                : language == 2
+                ? new String[]{"HUD","Ұрыс","Ойыншы","Әлем","Анимация","Камера","Интерфейс","Читтер","Скиндер"}
+                : CATS;
+        if (secretTabUnlocked) return all;
+        String[] visible = new String[all.length - 1];
+        System.arraycopy(all, 0, visible, 0, 7);
+        visible[7] = all[8];
+        return visible;
+    }
+
+    private int itemCategoryIndex() {
+        return !secretTabUnlocked && category >= 7 ? category + 1 : category;
+    }
     private String[] rightTabs(){return language==1?new String[]{"Настройки","Мини-игры","Друзья"}
         :language==2?new String[]{"Баптаулар","Мини-ойындар","Достар"}:RIGHT;}
 
@@ -116,7 +142,7 @@ public final class ClickGuiScreen extends Screen {
         if(rightTab>=0){
             renderRight(g,mx,my,mainX,mainW,y,ph);
         }else{
-            String[] names=ITEMS[category], descriptions=DESC[category];
+            String[] names=ITEMS[itemCategoryIndex()], descriptions=DESC[itemCategoryIndex()];
             g.drawString(font,cats[category],mainX,y+19,TEXT,false);
             g.drawString(font,tr("Visual modules / FPS-first","Визуальные модули / приоритет FPS","Визуалды модульдер / FPS басымдығы"),mainX,y+37,MUTED,false);
             int cardW=(mainW-12)/2, rows=Math.max(1,(ph-120)/58);
@@ -161,6 +187,11 @@ public final class ClickGuiScreen extends Screen {
                 g.fill(sx,y+222,sx+15,y+237,swatches[i]);
                 g.fill(sx,y+222,sx+15,y+223,0xFF000000);
             }
+            g.drawString(font, "HUD EDITOR", x, y + 267, VisualFeatures.accentColor(), false);
+            g.fill(x, y + 282, x + 174, y + 310,
+                    HudWindowManager.isEditMode() ? 0xFF3A315E : 0xFF292E40);
+            g.drawCenteredString(font, "EDIT HUD  →", x + 87, y + 292, TEXT);
+            g.drawString(font, "H — выйти из редактора", x, y + 318, MUTED, false);
         }else if(rightTab==1){
             g.drawString(font,tr("Minigames","Мини-игры","Мини-ойындар"),x,y+19,TEXT,false);
             int by=y+48;
@@ -179,7 +210,12 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,"Pick the Lock",x+12,by+186,TEXT,false);
             g.drawString(font,tr("Timing game  /  Watcher replaces Slark","Тайминг-игра  /  вместо Сларка — Смотрящий","Тайминг ойыны  /  Сларк орнына — Бақылаушы"),x+12,by+204,MUTED,false);
             g.drawString(font,tr("OPEN  >","ОТКРЫТЬ  >","АШУ  >"),x+12,by+227,VisualFeatures.accentColor(),false);
-            g.drawString(font,tr("Chess: right-click to move. Minesweeper: right-click reveal, Shift+right-click flag. Lockpick: click on the moving marker.","Шахматы: ПКМ ходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг. Взлом: ЛКМ по маркеру в цветной зоне.","Шахмат: оң жақпен жүру. Сапер: ашу — оң жақ, жалау — Shift+оң жақ. Құлып: түсті аймақта бас."),x,y+330,MUTED,false);
+            g.fill(x,by+264,x+w,by+340,CARD);
+            g.fill(x,by+264,x+3,by+340,VisualFeatures.accentColor());
+            g.drawString(font,"Крестики-нолики",x+12,by+274,TEXT,false);
+            g.drawString(font,"Ты — X, бот — O  /  Минимакс ИИ",x+12,by+292,MUTED,false);
+            g.drawString(font,"ИГРАТЬ  >",x+12,by+315,VisualFeatures.accentColor(),false);
+            g.drawString(font,tr("Chess: right-click to move. Minesweeper: right-click reveal, Shift+right-click flag. Lockpick: click on the moving marker.","Шахматы: ПКМ ходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг. Взлом: ЛКМ по маркеру в цветной зоне.","Шахмат: оң жақпен жүру. Сапер: ашу — оң жақ, жалау — Shift+оң жақ. Құлып: түсті аймақта бас."),x,y+356,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
             g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
@@ -211,7 +247,7 @@ public final class ClickGuiScreen extends Screen {
         if(e.button()==1 && rightTab<0){
             int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154;
             int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
-            String[] names=ITEMS[category];
+            String[] names=ITEMS[itemCategoryIndex()];
             int rows=Math.max(1,(ph-120)/58);
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){
@@ -247,6 +283,11 @@ public final class ClickGuiScreen extends Screen {
                     return true;
                 }
             }
+            if(mx>=mainX&&mx<=mainX+174&&my>=y+282&&my<=y+310){
+                HudWindowManager.toggleEditMode();
+                Minecraft.getInstance().setScreen(null);
+                return true;
+            }
         }else if(rightTab==1){
             int mainX=x+left+16,mainW=pw-left-right-48,by=y+48;
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by&&my<=by+76){
@@ -263,9 +304,13 @@ public final class ClickGuiScreen extends Screen {
                 Minecraft.getInstance().setScreen(new LockpickScreen());
                 return true;
             }
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=by+264&&my<=by+340){
+                Minecraft.getInstance().setScreen(new TicTacToeScreen());
+                return true;
+            }
         }else if(rightTab<0){
             int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
-            String[] names=ITEMS[category];
+            String[] names=ITEMS[itemCategoryIndex()];
             int rows=Math.max(1,(ph-120)/58);
             int start=Math.min(scroll,Math.max(0,names.length-rows*2));
             for(int n=start;n<Math.min(names.length,start+rows*2);n++){

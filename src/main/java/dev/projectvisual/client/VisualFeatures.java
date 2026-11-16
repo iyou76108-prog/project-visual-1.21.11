@@ -41,7 +41,8 @@ public final class VisualFeatures {
             "View Model","Camera Clip","Zoom","Smooth Camera","Perspective",
             "Notifications","Watermark","Module List","Custom Font","Color Theme","Player ESP","Hitbox Visual",
             "Queen Skin","Magnus AFK","Invoker Skin","Axe AFK","Interworlder Mask","Watcher AFK",
-            "Trainer","Guts","Akashi Seijuro","Dual Blades","Flying Spellbook","Hitboxes","Chest ESP"
+            "Trainer","Guts","Akashi Seijuro","Dual Blades","Flying Spellbook","Hitboxes","Chest ESP",
+            "Pencil Sword","Divine Rapier"
         };
         for (String module : modules) STATES.put(module, false);
         STATES.put("FPS Counter", true);
@@ -70,7 +71,16 @@ public final class VisualFeatures {
                 if (!skin.equals(module)) setEnabled(skin, false);
             }
         }
+        if (enabled && isSwordSkin(module)) {
+            for (String skin : new String[]{"Pencil Sword", "Divine Rapier"}) {
+                if (!skin.equals(module)) setEnabled(skin, false);
+            }
+        }
         setEnabled(module, enabled);
+    }
+
+    private static boolean isSwordSkin(String module) {
+        return module.equals("Pencil Sword") || module.equals("Divine Rapier");
     }
 
     private static boolean isBodySkin(String module) {

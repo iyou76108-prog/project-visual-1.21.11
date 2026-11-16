@@ -19,6 +19,7 @@ import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.item.SwordItem;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -705,11 +706,15 @@ public final class ChessWorldGame {
         boolean flyingSpellbook = VisualFeatures.isEnabled("Flying Spellbook") && thirdPerson && alive;
         boolean handCosmetics = VisualFeatures.isEnabled("Hand Cosmetics") && thirdPerson && alive;
         boolean capeEffects = VisualFeatures.isEnabled("Cape Effects") && thirdPerson && alive;
+        boolean swordHeld = alive && client.player.getMainHandItem().getItem() instanceof SwordItem;
+        boolean pencilSword = VisualFeatures.isEnabled("Pencil Sword") && thirdPerson && swordHeld;
+        boolean divineRapier = VisualFeatures.isEnabled("Divine Rapier") && thirdPerson && swordHeld;
         boolean magnusScene = afkSceneType == 1 && afkSceneTick >= 0;
         boolean axeScene = afkSceneType == 2 && afkSceneTick >= 0;
         boolean watcherScene = afkSceneType == 3 && afkSceneTick >= 0;
         if (!queenSkin && !invokerSkin && !gutsSkin && !akashiSkin && !interworlderMask
                 && !dualBlades && !flyingSpellbook && !handCosmetics && !capeEffects
+                && !pencilSword && !divineRapier
                 && !magnusScene && !axeScene && !watcherScene) return;
 
         VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
@@ -723,6 +728,10 @@ public final class ChessWorldGame {
         long gameTime = client.level.getGameTime();
         if (handCosmetics) renderHandCosmetics(out, new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D), gameTime);
         if (capeEffects) renderCapeEffect(out, new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D), gameTime);
+        if (pencilSword || divineRapier) {
+            renderSwordCosmetic(out, new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D),
+                    pencilSword, gameTime);
+        }
         if (invokerSkin) {
             BoardTransform invokerTransform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
             renderInvoker(out, invokerTransform, gameTime);
@@ -801,6 +810,45 @@ public final class ChessWorldGame {
                         0.12D + pull * 0.93D, 0xFF54318B, 32);
                 cylinder(out, voidTransform, 0.0D, 0.0D, 0.073D, 0.083D,
                         0.06D + pull * 0.58D, 0xFF080610, 32);
+            }
+        }
+    }
+
+    private static void renderSwordCosmetic(VertexConsumer out, BoardTransform t,
+                                            boolean pencil, long gameTime) {
+        Vec3 grip = new Vec3(0.43D, 0.80D, 0.26D);
+        Vec3 pommel = new Vec3(0.43D, 0.91D, 0.26D);
+        if (pencil) {
+            // A playful pencil sword with a pink eraser, metal ferrule and graphite tip.
+            renderLimb(out, t, grip, pommel, 0.035D, 0xFF49352C);
+            cylinder(out, t, 0.43D, 0.26D, 0.895D, 0.925D, 0.052D, 0xFFE87591, 10);
+            cylinder(out, t, 0.43D, 0.26D, 0.925D, 0.975D, 0.049D, 0xFFB8C0C7, 10);
+            box(out, t, 0.382D, 0.975D, 0.215D, 0.478D, 1.58D, 0.315D, 0xFFFFC928);
+            box(out, t, 0.382D, 1.02D, 0.316D, 0.399D, 1.54D, 0.326D, 0xFFE34D42);
+            box(out, t, 0.461D, 1.02D, 0.316D, 0.478D, 1.54D, 0.326D, 0xFFE34D42);
+            box(out, t, 0.401D, 1.00D, 0.208D, 0.459D, 1.56D, 0.216D, 0xFFFFE58B);
+            cone(out, t, 0.43D, 0.265D, 1.56D, 1.69D, 0.055D, 0xFFFFD5A0, 8);
+            cone(out, t, 0.43D, 0.265D, 1.675D, 1.72D, 0.020D, 0xFF25242A, 7);
+            box(out, t, 0.385D, 0.94D, 0.205D, 0.475D, 0.96D, 0.325D, 0xFFB7C0C8);
+        } else {
+            // Original Dota-inspired Divine Rapier mesh: silver blade, golden guard and blue pommel.
+            renderLimb(out, t, grip, pommel, 0.032D, 0xFF382B24);
+            for (int i = 0; i < 5; i++) {
+                double y = 0.82D + i * 0.018D;
+                box(out, t, 0.395D, y, 0.226D, 0.465D, y + 0.008D, 0.294D, 0xFF8D6A46);
+            }
+            sphere(out, t, 0.43D, 0.80D, 0.26D, 0.045D, 0xFF55C8E8, 10, 7);
+            box(out, t, 0.255D, 1.005D, 0.235D, 0.605D, 1.045D, 0.305D, 0xFFD9B45F);
+            box(out, t, 0.415D, 0.985D, 0.225D, 0.445D, 1.075D, 0.315D, 0xFFFFE4A1);
+            cone(out, t, 0.43D, 0.27D, 1.035D, 1.76D, 0.035D, 0xFFDCEAF5, 10);
+            renderLimb(out, t, new Vec3(0.426D, 1.10D, 0.278D),
+                    new Vec3(0.426D, 1.68D, 0.278D), 0.006D, 0xFF8DE7FF);
+            sphere(out, t, 0.43D, 1.04D, 0.27D, 0.034D, 0xFFFFE4A1, 10, 6);
+            for (int side : new int[]{-1, 1}) {
+                renderLimb(out, t, new Vec3(0.43D, 1.02D, 0.27D),
+                        new Vec3(0.43D + side * 0.15D, 1.13D, 0.27D), 0.018D, 0xFFD9B45F);
+                sphere(out, t, 0.43D + side * 0.15D, 1.13D, 0.27D,
+                        0.022D, 0xFFFFE9B4, 8, 5);
             }
         }
     }

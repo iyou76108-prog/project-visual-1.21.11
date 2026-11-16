@@ -39,18 +39,24 @@ public final class HudWindowManager {
                 "key.project_visual.hud_editor", GLFW.GLFW_KEY_H, category));
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (editKey.consumeClick()) {
-                editMode = !editMode;
-                if (client.player != null) {
-                    client.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
-                            editMode ? "§bHUD EDITOR §7— перетаскивай окна за заголовок, H — выход"
-                                    : "§7HUD EDITOR выключен"), true);
-                }
+                toggleEditMode();
             }
         });
     }
 
     public static boolean isEditMode() {
         return editMode;
+    }
+
+    public static void toggleEditMode() {
+        editMode = !editMode;
+        stopDragging();
+        Minecraft client = Minecraft.getInstance();
+        if (client.player != null) {
+            client.player.displayClientMessage(net.minecraft.network.chat.Component.literal(
+                    editMode ? "§bHUD EDITOR §7— перетаскивай окна за заголовок, H — выход"
+                            : "§7HUD EDITOR выключен"), true);
+        }
     }
 
     public static Frame begin(GuiGraphics g, String id, String title, int screenWidth,
@@ -119,10 +125,14 @@ public final class HudWindowManager {
         mouseX = rawX * scaleX;
         mouseY = rawY * scaleY;
         if (mc.screen != null) return;
+        int guiWidth = mc.getWindow().getGuiScaledWidth();
+        int guiHeight = mc.getWindow().getGuiScaledHeight();
         for (Window window : WINDOWS.values()) {
             if (window.dragging) {
-                window.x = (int) Math.round(mouseX - window.dragOffsetX);
-                window.y = (int) Math.round(mouseY - window.dragOffsetY);
+                window.x = Math.max(0, Math.min(guiWidth - window.width,
+                        (int) Math.round(mouseX - window.dragOffsetX)));
+                window.y = Math.max(0, Math.min(guiHeight - HEADER,
+                        (int) Math.round(mouseY - window.dragOffsetY)));
             }
         }
     }

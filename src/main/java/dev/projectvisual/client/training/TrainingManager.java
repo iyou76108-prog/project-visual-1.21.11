@@ -13,7 +13,10 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
@@ -41,12 +44,7 @@ public final class TrainingManager {
     private static double progress;
     private static int completedQuests;
     private static int cases;
-    private static LivingEntity trackedTarget;
-    private static float targetHealth;
-    private static boolean trackedAttackWasMace;
-    private static int trackedAttackTicks;
-    private static boolean trackedHitConfirmed;
-    private static int confirmedHealthWaitTicks;
+    private static final Map<Integer, AttackTracker> TRACKED_ATTACKS = new HashMap<>();
 
     private TrainingManager() {}
 
@@ -55,40 +53,32 @@ public final class TrainingManager {
     }
 
     public static void tick(Minecraft client) {
-        if (client.player == null || client.level == null || trackedTarget == null) {
-            clearTrackedTarget();
+        if (client.player == null || client.level == null) {
+            TRACKED_ATTACKS.clear();
             return;
         }
-        if (trackedTarget.isRemoved() || trackedTarget.level() != client.level || trackedAttackTicks <= 0) {
-            clearTrackedTarget();
-            return;
+
+        Iterator<AttackTracker> iterator = TRACKED_ATTACKS.values().iterator();
+        while (iterator.hasNext()) {
+            AttackTracker tracker = iterator.next();
+            Player target = tracker.target;
+            if (target.level() != client.level) {
+                iterator.remove();
+                continue;
+            }
+            updateObservedDamage(tracker);
+            tracker.ticksRemaining--;
+            if (tracker.ticksRemaining <= 0 || target.isRemoved()) iterator.remove();
         }
-        trackedAttackTicks--;
-        if (!trackedHitConfirmed) {
-            if (trackedAttackTicks <= 0) clearTrackedTarget();
-            return;
-        }
-        // The server hurt event confirms the hit; health synchronization can arrive a few ticks later.
-        float currentHealth = trackedTarget.getHealth() + trackedTarget.getAbsorptionAmount();
-        double dealt = targetHealth - currentHealth;
-        if (dealt > 0.001D) {
-            recordDamage(dealt, trackedAttackWasMace);
-            clearTrackedTarget();
-            return;
-        }
-        confirmedHealthWaitTicks--;
-        if (confirmedHealthWaitTicks <= 0 || trackedAttackTicks <= 0) clearTrackedTarget();
     }
 
-    /** Called when the exact entity previously attacked receives its server hurt animation. */
+    /** Hurt animation is an optional signal; damage counting does not depend on it. */
     public static void onHurtAnimation(LivingEntity victim) {
-        if (victim == trackedTarget && trackedAttackTicks > 0) {
-            trackedHitConfirmed = true;
-            confirmedHealthWaitTicks = 24;
-        }
+        AttackTracker tracker = TRACKED_ATTACKS.get(victim.getId());
+        if (tracker != null && tracker.target == victim) updateObservedDamage(tracker);
     }
 
-    /** Called at the head of the local player's attack packet path. */
+    /** Called when the local player sends an attack against a player entity. */
     public static void onAttack(Player attacker, Entity target) {
         Minecraft client = Minecraft.getInstance();
         if (attacker != client.player || !(target instanceof Player victim) || victim == attacker
@@ -96,13 +86,38 @@ public final class TrainingManager {
             return;
         }
 
-        trackedTarget = victim;
-        targetHealth = victim.getHealth() + victim.getAbsorptionAmount();
-        trackedAttackWasMace = attacker.getMainHandItem().is(Items.MACE)
+        boolean mace = attacker.getMainHandItem().is(Items.MACE)
                 || attacker.getOffhandItem().is(Items.MACE);
-        trackedAttackTicks = 40;
-        trackedHitConfirmed = false;
-        confirmedHealthWaitTicks = 0;
+        AttackTracker tracker = TRACKED_ATTACKS.get(victim.getId());
+        if (tracker == null || tracker.target != victim) {
+            tracker = new AttackTracker(victim, effectiveHealth(victim));
+            TRACKED_ATTACKS.put(victim.getId(), tracker);
+        }
+        tracker.mace = mace;
+        tracker.ticksRemaining = 32;
+    }
+
+    private static float effectiveHealth(Player player) {
+        return player.getHealth() + player.getAbsorptionAmount();
+    }
+
+    private static void updateObservedDamage(AttackTracker tracker) {
+        float current = effectiveHealth(tracker.target);
+        double lost = tracker.lastEffectiveHealth - current;
+        if (lost > 0.001D) recordDamage(lost, tracker.mace);
+        tracker.lastEffectiveHealth = current;
+    }
+
+    private static final class AttackTracker {
+        private final Player target;
+        private float lastEffectiveHealth;
+        private boolean mace;
+        private int ticksRemaining;
+
+        private AttackTracker(Player target, float initialHealth) {
+            this.target = target;
+            this.lastEffectiveHealth = initialHealth;
+        }
     }
 
     /** Called only when the client accepted a block-use action with a cobweb stack. */
@@ -220,11 +235,7 @@ public final class TrainingManager {
     }
 
     private static void clearTrackedTarget() {
-        trackedTarget = null;
-        trackedAttackTicks = 0;
-        trackedAttackWasMace = false;
-        trackedHitConfirmed = false;
-        confirmedHealthWaitTicks = 0;
+        TRACKED_ATTACKS.clear();
     }
 
     private static Path savePath() {

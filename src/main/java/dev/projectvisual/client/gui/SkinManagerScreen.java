@@ -26,7 +26,9 @@ public final class SkinManagerScreen extends Screen {
             new SkinOption("Guts", "Гатс", "Доспехи, плащ и огромный меч"),
             new SkinOption("Akashi Seijuro", "Акаши Сейджуро", "Красные волосы и форма №4"),
             new SkinOption("Dual Blades", "Клинки в обеих руках", "Два клинка поверх модели"),
-            new SkinOption("Flying Spellbook", "Летающая книга заклинаний", "Книга парит у плеча")
+            new SkinOption("Flying Spellbook", "Летающая книга заклинаний", "Книга парит у плеча"),
+            new SkinOption("Pencil Sword", "Меч «Карандаш»", "Шуточный жёлтый меч-карандаш"),
+            new SkinOption("Divine Rapier", "Божественная рапира", "Светлая рапира в стиле Dota 2")
     };
 
     private long caseStartedAt;
