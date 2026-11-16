@@ -5,6 +5,8 @@ import dev.projectvisual.client.chess.ChessWorldGame;
 import dev.projectvisual.client.minesweeper.MinesweeperWorldGame;
 import dev.projectvisual.client.VisualFeatures;
 import dev.projectvisual.client.gui.SkinManagerScreen;
+import dev.projectvisual.client.gui.ModuleSettingsScreen;
+import dev.projectvisual.client.hud.HudWindowManager;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.Minecraft;
@@ -186,6 +188,20 @@ public final class ClickGuiScreen extends Screen {
         }
     }
 
+    private static void showHudWindow(String module) {
+        String id = switch (module) {
+            case "Trainer" -> "trainer";
+            case "Watermark", "FPS Counter", "Ping" -> "watermark";
+            case "Keystrokes", "CPS Counter" -> "controls";
+            case "Armor HUD", "Potion HUD", "Totem Counter" -> "player_stats";
+            case "Target HUD", "Target Info" -> "target";
+            case "Array List", "Module List" -> "arraylist";
+            case "Notifications" -> "notifications";
+            default -> null;
+        };
+        if (id != null) HudWindowManager.setVisible(id, true);
+    }
+
     private static boolean isModuleAvailable(String module) {
         return !module.equals("Hand Cosmetics") && !module.equals("Cape Effects")
                 && !module.equals("Camera Clip") && !module.equals("Perspective")
@@ -193,8 +209,30 @@ public final class ClickGuiScreen extends Screen {
     }
 
     @Override public boolean mouseClicked(MouseButtonEvent e,boolean dbl){
-        if(e.button()!=0)return super.mouseClicked(e,dbl);
         double mx=e.x(),my=e.y(); int pw=Math.min(1000,width-24),ph=Math.min(540,height-24);
+        if(e.button()==1 && rightTab<0){
+            int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154;
+            int mainX=x+left+16,mainW=pw-left-right-48,cardW=(mainW-12)/2;
+            String[] names=ITEMS[category];
+            int rows=Math.max(1,(ph-120)/58);
+            int start=Math.min(scroll,Math.max(0,names.length-rows*2));
+            for(int n=start;n<Math.min(names.length,start+rows*2);n++){
+                int col=(n-start)%2,row=(n-start)/2;
+                int cx=mainX+col*(cardW+12),cy=y+74+row*58;
+                if(mx>=cx&&mx<=cx+cardW&&my>=cy&&my<=cy+48){
+                    String module=names[n];
+                    if(module.equals("Skin")){
+                        Minecraft.getInstance().setScreen(new SkinManagerScreen());
+                    }else if(isModuleAvailable(module)){
+                        Minecraft.getInstance().setScreen(new ModuleSettingsScreen(module,category));
+                    }
+                    return true;
+                }
+            }
+            return true;
+        }
+        if(e.button()!=0)return super.mouseClicked(e,dbl);
+
         int x=(width-pw)/2,y=(height-ph)/2,left=160,right=154,rightX=x+pw-right;
         String[] cats=categories(),tabs=rightTabs();
         for(int i=0;i<cats.length;i++){int cy=y+86+i*34;if(mx>=x+9&&mx<=x+left-9&&my>=cy-5&&my<=cy+22){category=i;rightTab=-1;scroll=0;return true;}}
@@ -249,9 +287,10 @@ public final class ClickGuiScreen extends Screen {
                         return true;
                     }
                     VisualFeatures.toggle(module);
-                    VisualHud.notifyToggle(module, VisualFeatures.isEnabled(module));
-                    if(module.equals("FPS Counter")) VisualHud.setEnabled(VisualFeatures.isEnabled(module));
-                    if(module.equals("Player ESP")) VisualFeatures.setPlayerEsp(VisualFeatures.isEnabled(module));
+                    boolean enabled = VisualFeatures.isEnabled(module);
+                    VisualHud.notifyToggle(module, enabled);
+                    if(module.equals("Player ESP")) VisualFeatures.setPlayerEsp(enabled);
+                    if(enabled) showHudWindow(module);
                     return true;
                 }
             }
