@@ -24,7 +24,7 @@ export async function clearBrowserSession(request:NextRequest,response:NextRespo
  response.cookies.set(COOKIE,"",{httpOnly:true,secure:process.env.NODE_ENV==="production",sameSite:"lax",path:"/",maxAge:0});
 }
 export async function getMinecraftUser(request:Request){
- const match=(request.headers.get("authorization")??"").match(/^Bearer\\s+(.+)$/i);
+ const match=(request.headers.get("authorization")??"").match(/^Bearer\s+(.+)$/i);
  if(!match)return null;
  const token=await prisma.minecraftToken.findUnique({where:{tokenHash:hashSecret(match[1])},include:{user:true}});
  if(!token||token.expiresAt<=new Date()||!token.user.emailVerifiedAt)return null;

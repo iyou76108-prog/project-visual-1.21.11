@@ -64,6 +64,7 @@ public final class ProjectVisualClient implements ClientModInitializer {
 
         VisualHud.register();
         HudWindowManager.register();
+        ProjectVisualApiClient.register();
         ChessWorldGame.register();
         MinesweeperWorldGame.register();
         VisualWorldEffects.register();

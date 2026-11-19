@@ -35,6 +35,7 @@ public final class ProjectVisualApiClient {
             "Hand Cosmetics", "Cape Effects"
     };
     private static String apiToken;
+    private static String minecraftUserId;
     private static int syncTicks;
     private static String lastAppliedSkin = "";
 
@@ -60,7 +61,7 @@ public final class ProjectVisualApiClient {
             syncTicks = 0;
             request("POST", "/api/minecraft/presence", "{}", ignored -> {});
             request("GET", "/api/minecraft/players", null, ProjectVisualApiClient::updateRemotePlayers);
-            request("GET", "/api/minecraft/me", null, ProjectVisualApiClient::updateOwnSkin);
+            refreshProfile(ignored -> {});
         });
     }
 
@@ -72,7 +73,19 @@ public final class ProjectVisualApiClient {
         apiToken = "";
         REMOTE_SKINS.clear();
         lastAppliedSkin = "";
+        minecraftUserId = null;
         saveToken();
+    }
+
+    public static String minecraftUserId() {
+        return minecraftUserId;
+    }
+
+    public static void refreshProfile(Consumer<String> callback) {
+        request("GET", "/api/minecraft/me", null, body -> {
+            updateOwnSkin(body);
+            if (callback != null) callback.accept(body);
+        });
     }
 
     public static String remoteSkinFor(String playerName) {
@@ -103,8 +116,12 @@ public final class ProjectVisualApiClient {
         try {
             JsonObject root = JsonParser.parseString(body).getAsJsonObject();
             JsonObject user = root.getAsJsonObject("user");
-            if (user == null || !user.has("equippedSkin") || user.get("equippedSkin").isJsonNull()) return;
-            String skin = user.get("equippedSkin").getAsString();
+            if (user == null) return;
+            if (user.has("id") && !user.get("id").isJsonNull()) {
+                minecraftUserId = user.get("id").getAsString();
+            }
+            String skin = user.has("equippedSkin") && !user.get("equippedSkin").isJsonNull()
+                    ? user.get("equippedSkin").getAsString() : "";
             if (skin.equals(lastAppliedSkin)) return;
             lastAppliedSkin = skin;
             for (String module : COSMETIC_MODULES) VisualFeatures.setEnabled(module, module.equals(skin));
@@ -140,6 +157,9 @@ public final class ProjectVisualApiClient {
                             return;
                         }
                         apiToken = json.get("accessToken").getAsString();
+                        if (json.has("userId") && !json.get("userId").isJsonNull()) {
+                            minecraftUserId = json.get("userId").getAsString();
+                        }
                         saveToken();
                         lastAppliedSkin = "";
                         callback.accept("Вход выполнен: " + json.get("username").getAsString());
