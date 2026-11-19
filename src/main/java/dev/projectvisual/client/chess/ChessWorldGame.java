@@ -77,6 +77,7 @@ public final class ChessWorldGame {
 
     private static ChessEngine GAME = new ChessEngine();
     private static boolean onlineGame;
+    private static boolean waitingOnlineMove;
     private static int lastOnlineVersion = -1;
 
     private static boolean registered;
@@ -150,6 +151,7 @@ public final class ChessWorldGame {
         OnlineMatchSession.clear();
         onlineGame = false;
         lastOnlineVersion = -1;
+        waitingOnlineMove = false;
         GAME.reset();
         summonBoard(false);
     }
@@ -160,6 +162,7 @@ public final class ChessWorldGame {
         if (match == null || !match.isChess() || !match.isActive()) return;
         onlineGame = true;
         lastOnlineVersion = match.version();
+        waitingOnlineMove = false;
         GAME = new ChessEngine(match.fen());
         summonBoard(!match.isPlayer1());
     }
@@ -179,14 +182,13 @@ public final class ChessWorldGame {
         active = true;
 
         double yaw = Math.toRadians(client.player.getYRot());
-        forward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
-        right = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
-        if (rotateForBlack) {
-            forward = forward.scale(-1.0D);
-            right = right.scale(-1.0D);
-        }
+        Vec3 viewForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+        Vec3 viewRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+        forward = rotateForBlack ? viewForward.scale(-1.0D) : viewForward;
+        right = rotateForBlack ? viewRight.scale(-1.0D) : viewRight;
         boardY = client.player.getEyeY() - 0.84D;
-        Vec3 anchor = client.player.position().add(forward.scale(3.75D));
+        // Keep the board in front of both players; only rotate its square orientation.
+        Vec3 anchor = client.player.position().add(viewForward.scale(3.75D));
         boardCenter = new Vec3(anchor.x, boardY, anchor.z);
 
         client.player.displayClientMessage(
@@ -224,6 +226,7 @@ public final class ChessWorldGame {
         if (onlineGame) OnlineMatchSession.clear();
         onlineGame = false;
         lastOnlineVersion = -1;
+        waitingOnlineMove = false;
         selectedSquare = -1;
         aiPending = false;
         moveAnimation = null;
@@ -269,8 +272,8 @@ public final class ChessWorldGame {
 
         boolean rightDown = client.mouseHandler.isRightPressed();
         if (rightDown && !rightWasDown && introTick >= INTRO_TICKS && !aiPending
-                && (!onlineGame || OnlineMatchSession.snapshot() != null
-                    && OnlineMatchSession.snapshot().isMyTurn())) {
+                && (!onlineGame || (!waitingOnlineMove && OnlineMatchSession.snapshot() != null
+                    && OnlineMatchSession.snapshot().isMyTurn()))) {
             handleBoardClick(client);
         } else if (rightDown && !rightWasDown && onlineGame
                 && OnlineMatchSession.snapshot() != null
@@ -331,6 +334,7 @@ public final class ChessWorldGame {
             if (onlineGame) {
                 char promotion = Character.toUpperCase(moving) == 'P' && (square / 8 == 0 || square / 8 == 7)
                         ? 'q' : 0;
+                waitingOnlineMove = true;
                 OnlineMatchSession.submitChessMove(ChessEngine.name(from), ChessEngine.name(square), promotion);
                 status = "Ожидание подтверждения хода…";
                 actionBar(client, "§bХод отправлен §7— ожидаем позицию сервера");
@@ -373,7 +377,14 @@ public final class ChessWorldGame {
             stop();
             return;
         }
+        if (waitingOnlineMove && !OnlineMatchSession.lastError().isBlank()) {
+            waitingOnlineMove = false;
+            selectedSquare = -1;
+            GAME = new ChessEngine(match.fen());
+            actionBar(client, "§cХод отклонён сервером: " + OnlineMatchSession.lastError());
+        }
         if (match.version() != lastOnlineVersion && match.fen() != null) {
+            waitingOnlineMove = false;
             try {
                 GAME = new ChessEngine(match.fen());
                 lastOnlineVersion = match.version();
