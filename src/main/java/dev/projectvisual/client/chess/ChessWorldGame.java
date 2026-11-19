@@ -7,6 +7,8 @@ import com.mojang.blaze3d.vertex.VertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import dev.projectvisual.client.ProjectVisualClient;
 import dev.projectvisual.client.VisualFeatures;
+import dev.projectvisual.client.account.OnlineMatchSession;
+import dev.projectvisual.client.account.ProjectVisualApiClient;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
@@ -20,6 +22,7 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.entity.player.Player;
 import org.lwjgl.glfw.GLFW;
 
 import java.util.concurrent.ThreadLocalRandom;
@@ -72,7 +75,9 @@ public final class ChessWorldGame {
             "project_visual_chess_solid",
             RenderSetup.builder(CHESS_SOLID_PIPELINE).createRenderSetup());
 
-    private static final ChessEngine GAME = new ChessEngine();
+    private static ChessEngine GAME = new ChessEngine();
+    private static boolean onlineGame;
+    private static int lastOnlineVersion = -1;
 
     private static boolean registered;
     private static boolean active;
@@ -140,14 +145,32 @@ public final class ChessWorldGame {
         WorldRenderEvents.AFTER_ENTITIES.register(ChessWorldGame::render);
     }
 
-    /** Starts a fresh match and summons the board a few blocks in front of the player. */
+    /** Starts a local game against the built-in chess opponent. */
     public static void start() {
+        OnlineMatchSession.clear();
+        onlineGame = false;
+        lastOnlineVersion = -1;
+        GAME.reset();
+        summonBoard(false);
+    }
+
+    /** Opens the current server-authoritative online game on this player's side. */
+    public static void startOnline() {
+        OnlineMatchSession.Snapshot match = OnlineMatchSession.snapshot();
+        if (match == null || !match.isChess() || !match.isActive()) return;
+        onlineGame = true;
+        lastOnlineVersion = match.version();
+        GAME = new ChessEngine(match.fen());
+        summonBoard(!match.isPlayer1());
+    }
+
+    private static void summonBoard(boolean rotateForBlack) {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null) return;
 
-        GAME.reset();
         selectedSquare = -1;
-        status = "Белые ходят";
+        status = onlineGame ? "Онлайн: " + safeName(OnlineMatchSession.snapshot().opponentName())
+                : "Белые ходят";
         aiPending = false;
         aiDelay = 0;
         moveAnimation = null;
@@ -158,15 +181,25 @@ public final class ChessWorldGame {
         double yaw = Math.toRadians(client.player.getYRot());
         forward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
         right = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+        if (rotateForBlack) {
+            forward = forward.scale(-1.0D);
+            right = right.scale(-1.0D);
+        }
         boardY = client.player.getEyeY() - 0.84D;
         Vec3 anchor = client.player.position().add(forward.scale(3.75D));
         boardCenter = new Vec3(anchor.x, boardY, anchor.z);
 
         client.player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal(
-                        "§bPROJECT VISUAL CHESS §7— доска появляется из портала. §fПКМ: выбрать и переместить фигуру."),
+                net.minecraft.network.chat.Component.literal(onlineGame
+                        ? "§bPROJECT VISUAL CHESS ONLINE §7— ты играешь за "
+                                + (rotateForBlack ? "чёрных" : "белых") + ". ПКМ — ход."
+                        : "§bPROJECT VISUAL CHESS §7— доска появляется из портала. §fПКМ: выбрать и переместить фигуру."),
                 false);
         spawnPortalParticles(client, 16);
+    }
+
+    private static String safeName(String value) {
+        return value == null || value.isBlank() ? "другом" : value;
     }
 
     public static boolean isActive() {
@@ -188,6 +221,9 @@ public final class ChessWorldGame {
 
     public static void stop() {
         active = false;
+        if (onlineGame) OnlineMatchSession.clear();
+        onlineGame = false;
+        lastOnlineVersion = -1;
         selectedSquare = -1;
         aiPending = false;
         moveAnimation = null;
@@ -211,9 +247,12 @@ public final class ChessWorldGame {
             return;
         }
         while (restartKey != null && restartKey.consumeClick()) {
-            start();
+            if (onlineGame) actionBar(client, "§7Онлайн-матч нельзя перезапустить локально.");
+            else start();
             return;
         }
+
+        if (onlineGame) syncOnlinePosition(client);
 
         introTick = Math.min(INTRO_TICKS, introTick + 1);
         if (introTick < INTRO_TICKS && (introTick % 3) == 0) spawnPortalParticles(client, 3);
@@ -229,12 +268,18 @@ public final class ChessWorldGame {
         }
 
         boolean rightDown = client.mouseHandler.isRightPressed();
-        if (rightDown && !rightWasDown && introTick >= INTRO_TICKS && !aiPending) {
+        if (rightDown && !rightWasDown && introTick >= INTRO_TICKS && !aiPending
+                && (!onlineGame || OnlineMatchSession.snapshot() != null
+                    && OnlineMatchSession.snapshot().isMyTurn())) {
             handleBoardClick(client);
+        } else if (rightDown && !rightWasDown && onlineGame
+                && OnlineMatchSession.snapshot() != null
+                && !OnlineMatchSession.snapshot().isMyTurn()) {
+            actionBar(client, "§7Сейчас ход соперника.");
         }
         rightWasDown = rightDown;
 
-        if (aiPending) {
+        if (aiPending && !onlineGame) {
             aiDelay--;
             if (aiDelay <= 0) performAiMove(client);
         }
@@ -250,13 +295,16 @@ public final class ChessWorldGame {
         }
 
         char piece = GAME.pieceAt(square);
+        boolean localWhite = !onlineGame || (OnlineMatchSession.snapshot() != null
+                && OnlineMatchSession.snapshot().isPlayer1());
         if (selectedSquare < 0) {
-            if (piece != 0 && Character.isUpperCase(piece) && GAME.whiteToMove()) {
+            if (piece != 0 && (Character.isUpperCase(piece) == localWhite)
+                    && GAME.whiteToMove() == localWhite) {
                 selectedSquare = square;
                 status = "Выбрана " + pieceName(piece) + " — укажи клетку назначения";
                 actionBar(client, "§bВыбрана " + pieceName(piece) + " §7— ПКМ по клетке назначения");
             } else {
-                actionBar(client, "§7Выбери белую фигуру. Сейчас ход белых.");
+                actionBar(client, onlineGame ? "§7Выбери свою фигуру." : "§7Выбери белую фигуру. Сейчас ход белых.");
             }
             return;
         }
@@ -267,7 +315,7 @@ public final class ChessWorldGame {
             return;
         }
 
-        if (piece != 0 && Character.isUpperCase(piece)) {
+        if (piece != 0 && Character.isUpperCase(piece) == localWhite) {
             selectedSquare = square;
             actionBar(client, "§bВыбрана " + pieceName(piece) + " §7— выбери клетку");
             return;
@@ -279,11 +327,17 @@ public final class ChessWorldGame {
         if (GAME.play(from, square)) {
             selectedSquare = -1;
             moveAnimation = new MoveAnimation(from, square, moving, 0);
-            status = "Чёрные думают…";
             if (captured != 0) spawnCaptureParticles(client, square);
-            if (GAME.result() != ChessEngine.Result.ONGOING) {
+            if (onlineGame) {
+                char promotion = Character.toUpperCase(moving) == 'P' && (square / 8 == 0 || square / 8 == 7)
+                        ? 'q' : 0;
+                OnlineMatchSession.submitChessMove(ChessEngine.name(from), ChessEngine.name(square), promotion);
+                status = "Ожидание подтверждения хода…";
+                actionBar(client, "§bХод отправлен §7— ожидаем позицию сервера");
+            } else if (GAME.result() != ChessEngine.Result.ONGOING) {
                 finishGame(client);
             } else {
+                status = "Чёрные думают…";
                 aiPending = true;
                 aiDelay = 9;
                 actionBar(client, "§7Ход чёрных — ИИ обдумывает ответ");
@@ -311,6 +365,28 @@ public final class ChessWorldGame {
         int file = Math.min(7, Math.max(0, (int) Math.floor((localX + HALF) / CELL)));
         int rank = Math.min(7, Math.max(0, (int) Math.floor((localZ + HALF) / CELL)));
         return rank * 8 + file;
+    }
+
+    private static void syncOnlinePosition(Minecraft client) {
+        OnlineMatchSession.Snapshot match = OnlineMatchSession.snapshot();
+        if (match == null || !match.isChess()) {
+            stop();
+            return;
+        }
+        if (match.version() != lastOnlineVersion && match.fen() != null) {
+            try {
+                GAME = new ChessEngine(match.fen());
+                lastOnlineVersion = match.version();
+                moveAnimation = null;
+                if (match.isFinished()) {
+                    finishGame(client);
+                } else {
+                    status = match.isMyTurn() ? "Твой ход" : "Ход " + safeName(match.opponentName());
+                }
+            } catch (IllegalArgumentException ignored) {
+                actionBar(client, "§cСервер прислал некорректную позицию шахмат.");
+            }
+        }
     }
 
     private static void performAiMove(Minecraft client) {
@@ -342,6 +418,15 @@ public final class ChessWorldGame {
     private static void finishGame(Minecraft client) {
         aiPending = false;
         ChessEngine.Result result = GAME.result();
+        if (onlineGame) {
+            String winner = OnlineMatchSession.snapshot() == null ? null
+                    : OnlineMatchSession.snapshot().winnerId();
+            String localId = ProjectVisualApiClient.minecraftUserId();
+            status = winner == null ? "Ничья" : winner.equals(localId) ? "Ты победил!" : "Соперник победил";
+            actionBar(client, winner == null ? "§eНИЧЬЯ" : winner.equals(localId)
+                    ? "§aПОБЕДА!" : "§cПОРАЖЕНИЕ");
+            return;
+        }
         if (result == ChessEngine.Result.CHECKMATE) {
             boolean whiteWon = !GAME.whiteToMove();
             status = whiteWon ? "Мат — победа белых!" : "Мат — победа чёрных";
@@ -440,6 +525,7 @@ public final class ChessWorldGame {
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
         renderChessCosmetics(context, client, camera);
+        renderRemotePlayerCosmetics(context, client, camera);
         if (!active) return;
         float progress = easeOut(introProgress());
         float scale = 0.12F + 0.88F * progress;
@@ -692,6 +778,48 @@ public final class ChessWorldGame {
         client.player.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§cAXE §7— Berserker's Call!"),
                 false);
+    }
+
+    private static void renderRemotePlayerCosmetics(WorldRenderContext context, Minecraft client, Vec3 camera) {
+        VertexConsumer out = context.consumers().getBuffer(CHESS_SOLID_RENDER_TYPE);
+        long gameTime = client.level.getGameTime();
+        for (Player player : client.level.players()) {
+            if (player == client.player || !player.isAlive()) continue;
+            String skin = ProjectVisualApiClient.remoteSkinFor(player.getName().getString());
+            if (skin == null || skin.isBlank()) continue;
+            double yaw = Math.toRadians(player.getYRot());
+            Vec3 playerForward = new Vec3(-Math.sin(yaw), 0.0D, Math.cos(yaw)).normalize();
+            Vec3 playerRight = new Vec3(Math.cos(yaw), 0.0D, Math.sin(yaw)).normalize();
+            Vec3 relative = player.position().subtract(camera);
+            BoardTransform transform = new BoardTransform(relative, playerRight, playerForward, 1.0F, 0.0D);
+            switch (skin) {
+                case "Queen Skin" -> renderPiece(out, transform, 0.0F, 0.0F, 'Q', 0.0F);
+                case "Invoker Skin" -> renderInvoker(out, transform, gameTime);
+                case "Guts" -> renderGuts(out, transform);
+                case "Akashi Seijuro" -> renderAkashi(out, transform);
+                case "Interworlder Mask" -> renderInterworlderMask(out, transform);
+                case "Dual Blades" -> renderDualBlades(out, transform);
+                case "Flying Spellbook" -> renderFlyingSpellbook(out, relative, playerRight, playerForward, gameTime);
+                case "Hand Cosmetics" -> renderHandCosmetics(out, transform, gameTime);
+                case "Cape Effects" -> renderCapeEffect(out, transform, gameTime);
+                case "Pencil Sword" -> {
+                    if (isSwordItem(player)) renderSwordCosmetic(out, transform, true, gameTime);
+                }
+                case "Divine Rapier" -> {
+                    if (isSwordItem(player)) renderSwordCosmetic(out, transform, false, gameTime);
+                }
+                default -> { }
+            }
+        }
+    }
+
+    private static boolean isSwordItem(Player player) {
+        return player.getMainHandItem().is(Items.WOODEN_SWORD)
+                || player.getMainHandItem().is(Items.STONE_SWORD)
+                || player.getMainHandItem().is(Items.IRON_SWORD)
+                || player.getMainHandItem().is(Items.GOLDEN_SWORD)
+                || player.getMainHandItem().is(Items.DIAMOND_SWORD)
+                || player.getMainHandItem().is(Items.NETHERITE_SWORD);
     }
 
     private static void renderChessCosmetics(WorldRenderContext context, Minecraft client, Vec3 camera) {
