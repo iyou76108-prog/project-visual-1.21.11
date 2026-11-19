@@ -4,6 +4,7 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.client.input.MouseButtonEvent;
+import dev.projectvisual.client.hud.HudDragCoordinates;
 import net.minecraft.network.chat.Component;
 
 /** Transparent HUD layout editor. The screen releases the game cursor while editing. */
@@ -47,7 +48,9 @@ public final class HudEditorScreen extends Screen {
 
     @Override
     public boolean mouseDragged(MouseButtonEvent event, double dragX, double dragY) {
-        HudWindowManager.onEditorMouseMove(event.x(), event.y());
+        HudDragCoordinates.Point pointer = HudDragCoordinates.fromDrag(
+                event.x(), event.y(), dragX, dragY);
+        HudWindowManager.onEditorMouseMove(pointer.x(), pointer.y());
         return true;
     }
 

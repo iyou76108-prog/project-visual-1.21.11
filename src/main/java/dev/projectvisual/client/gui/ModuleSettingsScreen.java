@@ -311,7 +311,8 @@ public final class ModuleSettingsScreen extends Screen {
             activeSliderRow = -1;
             return false;
         }
-        updateSliderFromMouse(currentRows.get(activeSliderRow).type(), event.x(), px, panelW);
+        updateSliderFromMouse(currentRows.get(activeSliderRow).type(),
+                event.x() + dragX, px, panelW);
         return true;
     }
 

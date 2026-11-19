@@ -18,6 +18,8 @@ import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ItemDisplayContext;
+import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemUseAnimation;
 import net.minecraft.world.item.Items;
 import dev.projectvisual.client.ProjectVisualClient;
@@ -120,27 +122,28 @@ public abstract class FirstPersonVisualMixin {
             matrices.mulPose(Axis.XP.rotationDegrees(-4.0F));
         }
     }
-    @Inject(method = "renderArmWithItem(Lnet/minecraft/client/player/AbstractClientPlayer;FFLnet/minecraft/world/InteractionHand;FLnet/minecraft/world/item/ItemStack;FLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
-            at = @At("TAIL"))
-    private void projectvisual$renderFirstPersonSword(AbstractClientPlayer player, float partialTick,
-            float pitch, InteractionHand hand, float swingProgress, ItemStack stack,
-            float equippedProgress, PoseStack matrices, SubmitNodeCollector collector,
-            int packedLight, CallbackInfo ci) {
-        if (hand != InteractionHand.MAIN_HAND || player != net.minecraft.client.Minecraft.getInstance().player) return;
+    @Inject(
+            method = "renderItem(Lnet/minecraft/world/entity/LivingEntity;Lnet/minecraft/world/item/ItemStack;Lnet/minecraft/world/item/ItemDisplayContext;Lcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/SubmitNodeCollector;I)V",
+            at = @At("HEAD"),
+            cancellable = true
+    )
+    private void projectvisual$replaceFirstPersonSword(LivingEntity entity, ItemStack stack,
+            ItemDisplayContext displayContext, PoseStack matrices,
+            SubmitNodeCollector collector, int packedLight, CallbackInfo ci) {
+        if (displayContext != ItemDisplayContext.FIRST_PERSON_RIGHT_HAND
+                && displayContext != ItemDisplayContext.FIRST_PERSON_LEFT_HAND) return;
         boolean pencil = VisualFeatures.isEnabled("Pencil Sword");
         boolean rapier = VisualFeatures.isEnabled("Divine Rapier");
         if ((!pencil && !rapier) || !isVanillaSword(stack)) return;
 
-        float side = player.getMainArm() == net.minecraft.world.entity.HumanoidArm.RIGHT ? 1.0F : -1.0F;
+        // This hook runs while ItemInHandRenderer still has the first-person hand/equip matrices.
         matrices.pushPose();
-        matrices.translate(side * 0.34F, -0.40F, -0.60F);
-        matrices.mulPose(Axis.YP.rotationDegrees(side * 34.0F));
-        matrices.mulPose(Axis.XP.rotationDegrees(-18.0F));
-        matrices.mulPose(Axis.ZP.rotationDegrees(side * -9.0F));
-        matrices.scale(0.34F, 0.34F, 0.34F);
+        matrices.scale(0.42F, 0.42F, 0.42F);
+        matrices.mulPose(Axis.XP.rotationDegrees(-8.0F));
         collector.submitCustomGeometry(matrices, SWORD_RENDER_TYPE,
                 (pose, out) -> renderHeldSword(out, pose, pencil));
         matrices.popPose();
+        ci.cancel();
     }
 
     private static boolean isVanillaSword(ItemStack stack) {
