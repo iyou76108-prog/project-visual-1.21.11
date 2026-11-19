@@ -16,9 +16,26 @@ public abstract class EntityHitboxMixin {
     private void projectvisual$playerEsp(CallbackInfoReturnable<Boolean> cir) {
         if (VisualFeatures.isPlayerEsp()
                 && (Object) this instanceof Player player
-                && player != Minecraft.getInstance().player) {
+                && player != Minecraft.getInstance().player
+                && Minecraft.getInstance().player != null
+                && Minecraft.getInstance().player.distanceToSqr(player)
+                    <= VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) {
             cir.setReturnValue(true);
         }
+    }
+
+    /**
+     * Meteor-style target expansion: Entity#getPickRadius is consulted by the
+     * client's entity ray-picking code. Only other live players are affected.
+     * This is client-side target selection, not a server-side reach change.
+     */
+    @Inject(method = "getPickRadius()F", at = @At("HEAD"), cancellable = true)
+    private void projectvisual$expandPlayerPickRadius(CallbackInfoReturnable<Float> cir) {
+        if (!VisualFeatures.isEnabled("Hitboxes")) return;
+        if (!((Object) this instanceof Player target)
+                || target == Minecraft.getInstance().player
+                || !target.isAlive()) return;
+        cir.setReturnValue((float) VisualFeatures.hitboxExpansion());
     }
 
 }

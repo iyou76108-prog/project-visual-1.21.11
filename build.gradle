@@ -7,6 +7,8 @@ group = project.maven_group
 base { archivesName = project.archives_base_name }
 repositories { mavenCentral() }
 dependencies {
+    testImplementation "junit:junit:4.13.2"
+    testRuntimeOnly "org.hamcrest:hamcrest:2.2"
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings loom.officialMojangMappings()
     modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
@@ -19,6 +21,10 @@ processResources {
 tasks.withType(JavaCompile).configureEach {
     options.release = 21
     options.encoding = "UTF-8"
+}
+
+tasks.withType(Test).configureEach {
+    useJUnit()
 }
 java {
     withSourcesJar()

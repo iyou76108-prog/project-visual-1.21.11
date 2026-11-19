@@ -1,0 +1,40 @@
+name: Website Check
+
+on:
+  push:
+    branches: ["**"]
+    paths:
+      - "website/**"
+      - ".github/workflows/site-check.yml"
+  pull_request:
+    paths:
+      - "website/**"
+      - ".github/workflows/site-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  website:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: website
+    env:
+      DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/project_visual?schema=public"
+      APP_URL: "http://localhost:3000"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "26"
+      - name: Install dependencies
+        run: npm install
+      - name: Validate Prisma schema
+        run: npx prisma validate
+      - name: Generate Prisma client
+        run: npx prisma generate
+      - name: Build website
+        run: npm run build

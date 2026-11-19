@@ -1,0 +1,5 @@
+import {NextRequest,NextResponse} from "next/server";
+import {clearBrowserSession} from "@/lib/auth";
+export async function POST(request:NextRequest){
+ const response=NextResponse.json({ok:true});await clearBrowserSession(request,response);return response;
+}

@@ -1,17 +1,29 @@
 package dev.projectvisual.client;
 
+import com.mojang.blaze3d.pipeline.RenderPipeline;
+import com.mojang.blaze3d.pipeline.BlendFunction;
+import com.mojang.blaze3d.platform.DepthTestFunction;
+import com.mojang.blaze3d.shaders.UniformType;
+import com.mojang.blaze3d.vertex.DefaultVertexFormat;
 import com.mojang.blaze3d.vertex.VertexConsumer;
+import com.mojang.blaze3d.vertex.VertexFormat;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.world.WorldRenderEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
 import net.minecraft.client.renderer.ShapeRenderer;
 import net.minecraft.client.renderer.rendertype.RenderTypes;
+import net.minecraft.client.renderer.rendertype.RenderSetup;
+import net.minecraft.client.renderer.rendertype.RenderType;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.resources.Identifier;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.AABB;
@@ -21,6 +33,7 @@ import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -34,10 +47,35 @@ public final class VisualWorldEffects {
     private static final int MAX_BREADCRUMBS = 42;
     private static final Map<UUID, Deque<Vec3>> PLAYER_TRAILS = new HashMap<>();
     private static final Deque<Vec3> BREADCRUMBS = new ArrayDeque<>();
+    private static final List<BlockPos> CHEST_ESP_BLOCKS = new ArrayList<>();
+
+    private static final RenderPipeline THROUGH_WALL_LINES_PIPELINE =
+            RenderPipeline.builder()
+                    .withLocation(Identifier.fromNamespaceAndPath(
+                            ProjectVisualClient.MOD_ID, "pipeline/through_wall_lines"))
+                    .withVertexShader("core/rendertype_lines")
+                    .withFragmentShader("core/rendertype_lines")
+                    .withUniform("DynamicTransforms", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Projection", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Fog", UniformType.UNIFORM_BUFFER)
+                    .withUniform("Globals", UniformType.UNIFORM_BUFFER)
+                    .withBlend(BlendFunction.TRANSLUCENT)
+                    .withDepthTestFunction(DepthTestFunction.NO_DEPTH_TEST)
+                    .withDepthWrite(false)
+                    .withCull(false)
+                    .withVertexFormat(DefaultVertexFormat.POSITION_COLOR_NORMAL_LINE_WIDTH, VertexFormat.Mode.LINES)
+                    .build();
+
+    private static final RenderType THROUGH_WALL_LINES = RenderType.create(
+            "project_visual_through_wall_lines",
+            RenderSetup.builder(THROUGH_WALL_LINES_PIPELINE).createRenderSetup());
 
     private static KeyMapping zoomKey;
     private static boolean smoothCameraApplied;
     private static boolean previousSmoothCamera;
+    private static boolean perspectiveApplied;
+    private static CameraType previousPerspective;
+    private static CameraType appliedPerspective;
     private static int tickCounter;
 
     private VisualWorldEffects() {}
@@ -59,6 +97,7 @@ public final class VisualWorldEffects {
     private static void tick(Minecraft client) {
         if (client.player == null || client.level == null) {
             restoreSmoothCamera(client);
+            restorePerspective(client);
             return;
         }
 
@@ -71,7 +110,24 @@ public final class VisualWorldEffects {
             restoreSmoothCamera(client);
         }
 
+        boolean forcePerspective = VisualFeatures.isEnabled("Perspective");
+        if (forcePerspective && !perspectiveApplied) {
+            previousPerspective = client.options.getCameraType();
+            appliedPerspective = perspectiveForMode();
+            client.options.setCameraType(appliedPerspective);
+            perspectiveApplied = true;
+        } else if (forcePerspective && perspectiveApplied) {
+            CameraType desired = perspectiveForMode();
+            if (desired != appliedPerspective) {
+                client.options.setCameraType(desired);
+                appliedPerspective = desired;
+            }
+        } else if (!forcePerspective) {
+            restorePerspective(client);
+        }
+
         tickCounter++;
+        if ((tickCounter % 20) == 0) refreshChestEsp(client);
         if ((tickCounter & 1) != 0) return;
 
         if (VisualFeatures.isEnabled("Breadcrumbs")) {
@@ -88,7 +144,7 @@ public final class VisualWorldEffects {
             Set<UUID> online = new HashSet<>();
             for (Player player : client.level.players()) {
                 if (player == client.player || !player.isAlive()
-                        || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
+                        || client.player.distanceToSqr(player) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
                 UUID id = player.getUUID();
                 online.add(id);
                 Deque<Vec3> trail = PLAYER_TRAILS.computeIfAbsent(id, ignored -> new ArrayDeque<>());
@@ -109,19 +165,44 @@ public final class VisualWorldEffects {
         if (!VisualFeatures.isEnabled("Hit Particles") || client.level == null
                 || target.level() != client.level || !target.isAlive()) return;
 
+        int style = VisualFeatures.hitParticleStyle();
+        if (style == 4) return;
         ThreadLocalRandom random = ThreadLocalRandom.current();
         double centerY = target.getY() + target.getBbHeight() * 0.58D;
-        for (int i = 0; i < 7; i++) {
+        for (int i = 0; i < VisualFeatures.hitParticleCount(); i++) {
             double x = target.getX() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
             double y = centerY + random.nextDouble(-0.12D, 0.28D) * target.getBbHeight();
             double z = target.getZ() + random.nextDouble(-0.32D, 0.32D) * target.getBbWidth();
             double vx = random.nextDouble(-0.11D, 0.11D);
             double vy = random.nextDouble(0.04D, 0.16D);
             double vz = random.nextDouble(-0.11D, 0.11D);
-            client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
-            if ((i & 1) == 0) {
-                client.level.addParticle(ParticleTypes.CRIT, x, y, z, vx * 1.35D, vy, vz * 1.35D);
+            switch (style) {
+                case 0 -> {
+                    client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
+                    if ((i & 1) == 0) client.level.addParticle(ParticleTypes.CRIT,
+                            x, y, z, vx * 1.35D, vy, vz * 1.35D);
+                }
+                case 1 -> client.level.addParticle(ParticleTypes.CRIT, x, y, z, vx, vy, vz);
+                case 2 -> client.level.addParticle(ParticleTypes.ENCHANT, x, y, z, vx, vy, vz);
+                case 3 -> client.level.addParticle(ParticleTypes.FLAME, x, y, z, vx * 0.4D, vy, vz * 0.4D);
+                default -> client.level.addParticle(ParticleTypes.DAMAGE_INDICATOR, x, y, z, vx, vy, vz);
             }
+        }
+    }
+
+    private static CameraType perspectiveForMode() {
+        return VisualFeatures.perspectiveMode() == 0
+                ? CameraType.THIRD_PERSON_BACK : CameraType.THIRD_PERSON_FRONT;
+    }
+
+    private static void restorePerspective(Minecraft client) {
+        if (perspectiveApplied) {
+            if (client.options.getCameraType() == appliedPerspective && previousPerspective != null) {
+                client.options.setCameraType(previousPerspective);
+            }
+            perspectiveApplied = false;
+            previousPerspective = null;
+            appliedPerspective = null;
         }
     }
 
@@ -136,22 +217,26 @@ public final class VisualWorldEffects {
         Minecraft client = Minecraft.getInstance();
         if (client.player == null || client.level == null || client.options.hideGui) return;
 
-        boolean drawHitboxes = VisualFeatures.isEnabled("Hitbox Visual");
+        boolean drawPlayerHitboxes = VisualFeatures.isEnabled("Hitbox Visual");
+        boolean drawEntityHitboxes = VisualFeatures.isEnabled("Hitboxes");
+        boolean drawChestEsp = VisualFeatures.isEnabled("Chest ESP");
         boolean drawTrails = VisualFeatures.isEnabled("Player Trails");
         boolean drawBreadcrumbs = VisualFeatures.isEnabled("Breadcrumbs");
         boolean drawHat = VisualFeatures.isEnabled("China Hat");
         boolean drawBlockOverlay = VisualFeatures.isEnabled("Block Overlay");
-        if (!drawHitboxes && !drawTrails && !drawBreadcrumbs && !drawHat && !drawBlockOverlay) return;
+        boolean drawNormalLines = drawPlayerHitboxes || drawTrails || drawBreadcrumbs || drawHat || drawBlockOverlay;
+        if (!drawNormalLines && !drawEntityHitboxes && !drawChestEsp) return;
 
         Vec3 camera = client.gameRenderer.getMainCamera().position();
-        VertexConsumer lines = context.consumers().getBuffer(RenderTypes.lines());
+        VertexConsumer lines = drawNormalLines
+                ? context.consumers().getBuffer(RenderTypes.lines()) : null;
 
-        if (drawHitboxes) {
+        if (drawPlayerHitboxes) {
             for (Player player : client.level.players()) {
                 if (player == client.player || !player.isAlive()
-                        || client.player.distanceToSqr(player) > 64.0D * 64.0D) continue;
+                        || client.player.distanceToSqr(player) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
                 int color = VisualFeatures.accentColor();
-                drawBox(context, lines, player.getBoundingBox(), camera, color, 1.7F);
+                drawBox(context, lines, player.getBoundingBox(), camera, color, VisualFeatures.hitboxVisualWidth());
             }
         }
 
@@ -172,7 +257,8 @@ public final class VisualWorldEffects {
                 int size = trail.size();
                 for (Vec3 point : trail) {
                     float alpha = 0.25F + 0.65F * ((float) ++index / Math.max(1, size));
-                    int color = (Math.min(255, (int) (alpha * 255.0F)) << 24) | 0x0054D6C8;
+                    int color = (Math.min(255, (int) (alpha * 255.0F)) << 24)
+                        | (VisualFeatures.accentColor() & 0x00FFFFFF);
                     drawMarker(context, lines, point, camera, color, 0.055D);
                 }
             }
@@ -190,6 +276,53 @@ public final class VisualWorldEffects {
                 drawMarker(context, lines, point, camera, color, 0.075D);
             }
         }
+
+        // ESP overlays use a no-depth-test line pipeline, so boxes remain visible
+        // through terrain and other world geometry like a conventional client ESP.
+        if (drawEntityHitboxes || drawChestEsp) {
+            VertexConsumer espLines = context.consumers().getBuffer(THROUGH_WALL_LINES);
+            int color = VisualFeatures.accentColor();
+            if (drawEntityHitboxes) {
+                for (Entity entity : client.level.entitiesForRendering()) {
+                    if (!(entity instanceof Player target) || target == client.player
+                            || !target.isAlive() || client.player.distanceToSqr(target) > VisualFeatures.espDistance() * (double) VisualFeatures.espDistance()) continue;
+                    drawBox(context, espLines, target.getBoundingBox().inflate(VisualFeatures.hitboxExpansion()),
+                            camera, color, VisualFeatures.hitboxVisualWidth());
+                }
+            }
+            if (drawChestEsp) {
+                for (BlockPos pos : CHEST_ESP_BLOCKS) {
+                    AABB chest = new AABB(pos.getX(), pos.getY(), pos.getZ(),
+                            pos.getX() + 1.0D, pos.getY() + 1.0D, pos.getZ() + 1.0D);
+                    drawBox(context, espLines, chest, camera, color, 2.5F);
+                }
+            }
+        }
+    }
+
+    private static void refreshChestEsp(Minecraft client) {
+        if (!VisualFeatures.isEnabled("Chest ESP") || client.player == null || client.level == null) {
+            CHEST_ESP_BLOCKS.clear();
+            return;
+        }
+
+        CHEST_ESP_BLOCKS.clear();
+        BlockPos origin = client.player.blockPosition();
+        int horizontalRadius = Math.min(32, VisualFeatures.chestEspRadius());
+        int verticalRadius = Math.max(4, horizontalRadius / 2);
+        for (int x = -horizontalRadius; x <= horizontalRadius; x++) {
+            for (int y = -verticalRadius; y <= verticalRadius; y++) {
+                for (int z = -horizontalRadius; z <= horizontalRadius; z++) {
+                    BlockPos pos = origin.offset(x, y, z);
+                    if (!client.level.hasChunkAt(pos)) continue;
+                    var block = client.level.getBlockState(pos).getBlock();
+                    if (block == Blocks.CHEST || block == Blocks.TRAPPED_CHEST
+                            || block == Blocks.ENDER_CHEST || block == Blocks.BARREL) {
+                        CHEST_ESP_BLOCKS.add(pos.immutable());
+                    }
+                }
+            }
+        }
     }
 
     private static void renderChinaHat(WorldRenderContext context, VertexConsumer lines,
@@ -200,17 +333,17 @@ public final class VisualWorldEffects {
 
         for (int i = 0; i < 16; i++) {
             double angle = (Math.PI * 2.0D * i) / 16.0D;
-            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.48D, brimY,
-                    base.z + Math.sin(angle) * 0.48D);
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.48D * VisualFeatures.chinaHatSize(), brimY,
+                    base.z + Math.sin(angle) * 0.48D * VisualFeatures.chinaHatSize());
             drawMarker(context, lines, point, camera, color, 0.035D);
         }
         for (int i = 0; i < 12; i++) {
             double angle = (Math.PI * 2.0D * i) / 12.0D;
-            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.23D, brimY + 0.22D,
-                    base.z + Math.sin(angle) * 0.23D);
+            Vec3 point = new Vec3(base.x + Math.cos(angle) * 0.23D * VisualFeatures.chinaHatSize(), brimY + 0.22D * VisualFeatures.chinaHatSize(),
+                    base.z + Math.sin(angle) * 0.23D * VisualFeatures.chinaHatSize());
             drawMarker(context, lines, point, camera, color, 0.03D);
         }
-        drawMarker(context, lines, new Vec3(base.x, brimY + 0.43D, base.z),
+        drawMarker(context, lines, new Vec3(base.x, brimY + 0.43D * VisualFeatures.chinaHatSize(), base.z),
                 camera, color, 0.04D);
     }
 

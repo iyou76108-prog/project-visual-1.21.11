@@ -5,14 +5,17 @@
   "compatibilityLevel": "JAVA_21",
   "client": [
     "EntityHitboxMixin",
+    "CameraClipMixin",
     "FullbrightMixin",
     "ClientWorldVisualMixin",
     "ZoomMixin",
     "MouseClickMixin",
+    "TrainingCombatMixin",
     "ItemPhysicsMixin",
     "FirstPersonVisualMixin",
     "PlayerNameTagsMixin",
     "LivingEntityVisualMixin",
+    "QueenSkinRenderMixin",
     "GuiCrosshairMixin"
   ],
   "injectors": {
