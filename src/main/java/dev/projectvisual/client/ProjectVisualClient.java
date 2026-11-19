@@ -3,6 +3,8 @@ package dev.projectvisual.client;
 import dev.projectvisual.client.gui.ClickGuiScreen;
 import dev.projectvisual.client.account.MinecraftLinkScreen;
 import dev.projectvisual.client.account.ProjectVisualApiClient;
+import dev.projectvisual.client.account.OnlineMatchSession;
+import dev.projectvisual.client.gui.SocialHubScreen;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.minecraft.network.chat.Component;
@@ -53,11 +55,7 @@ public final class ProjectVisualClient implements ClientModInitializer {
                         return 1;
                     }))
                     .then(ClientCommandManager.literal("friends").executes(context -> {
-                        ProjectVisualApiClient.getFriends(result -> {
-                            Minecraft client = Minecraft.getInstance();
-                            if (client.player != null) client.player.displayClientMessage(
-                                    Component.literal("§bPROJECT VISUAL §7" + result), false);
-                        });
+                        Minecraft.getInstance().setScreen(new SocialHubScreen());
                         return 1;
                     })));
         });
@@ -65,6 +63,7 @@ public final class ProjectVisualClient implements ClientModInitializer {
         VisualHud.register();
         HudWindowManager.register();
         ProjectVisualApiClient.register();
+        OnlineMatchSession.register();
         ChessWorldGame.register();
         MinesweeperWorldGame.register();
         VisualWorldEffects.register();

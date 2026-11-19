@@ -16,5 +16,5 @@ export async function POST(request:Request){
   return account;
  }).catch(()=>null);
  if(!user)return NextResponse.json({error:"Код уже использован. Создай новый на сайте."},{status:410});
- return NextResponse.json({accessToken,username:user.username,expiresAt:expiresAt.toISOString()});
+ return NextResponse.json({accessToken,userId:user.id,username:user.username,expiresAt:expiresAt.toISOString()});
 }

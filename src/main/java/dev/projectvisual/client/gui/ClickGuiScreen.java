@@ -7,6 +7,7 @@ import dev.projectvisual.client.VisualFeatures;
 import dev.projectvisual.client.gui.SkinManagerScreen;
 import dev.projectvisual.client.gui.ModuleSettingsScreen;
 import dev.projectvisual.client.gui.TicTacToeScreen;
+import dev.projectvisual.client.gui.SocialHubScreen;
 import dev.projectvisual.client.hud.HudWindowManager;
 import dev.projectvisual.client.hud.HudEditorScreen;
 import net.minecraft.client.gui.GuiGraphics;
@@ -219,9 +220,14 @@ public final class ClickGuiScreen extends Screen {
             g.drawString(font,tr("Chess: right-click to move. Minesweeper: right-click reveal, Shift+right-click flag. Lockpick: click on the moving marker.","Шахматы: ПКМ ходить. Сапёр: ПКМ открыть, Shift+ПКМ флаг. Взлом: ЛКМ по маркеру в цветной зоне.","Шахмат: оң жақпен жүру. Сапер: ашу — оң жақ, жалау — Shift+оң жақ. Құлып: түсті аймақта бас."),x,y+356,MUTED,false);
         }else{
             g.drawString(font,tr("Friends","Друзья","Достар"),x,y+19,TEXT,false);
-            g.drawString(font,tr("Find other PROJECT VISUAL users.","Найти пользователей PROJECT VISUAL.","PROJECT VISUAL қолданушыларын табу."),x,y+54,MUTED,false);
-            g.drawString(font,tr("Online discovery needs a shared","Для поиска онлайн нужен общий","Онлайн іздеу үшін ортақ сервер"),x,y+76,MUTED,false);
-            g.drawString(font,tr("presence server; not connected yet.","сервер присутствия; пока не подключён.","қажет; әзірге қосылмаған."),x,y+90,MUTED,false);
+            g.drawString(font,"PROJECT VISUAL SOCIAL",x,y+53,VisualFeatures.accentColor(),false);
+            g.drawString(font,"Добавляй игроков, принимай приглашения",x,y+73,MUTED,false);
+            g.drawString(font,"и запускай совместные матчи.",x,y+88,MUTED,false);
+            g.fill(x,y+116,x+w,y+194,CARD);
+            g.fill(x,y+116,x+3,y+194,VisualFeatures.accentColor());
+            g.drawString(font,"Друзья и онлайн-игры",x+12,y+130,TEXT,false);
+            g.drawString(font,"Шахматы  /  Крестики-нолики",x+12,y+149,MUTED,false);
+            g.drawString(font,"ОТКРЫТЬ СОЦИАЛЬНЫЙ ЦЕНТР  >",x+12,y+173,VisualFeatures.accentColor(),false);
         }
     }
 
@@ -306,6 +312,12 @@ public final class ClickGuiScreen extends Screen {
             }
             if(mx>=mainX&&mx<=mainX+mainW&&my>=by+264&&my<=by+340){
                 Minecraft.getInstance().setScreen(new TicTacToeScreen());
+                return true;
+            }
+        }else if(rightTab==2){
+            int mainX=x+left+16,mainW=pw-left-right-48;
+            if(mx>=mainX&&mx<=mainX+mainW&&my>=y+116&&my<=y+194){
+                Minecraft.getInstance().setScreen(new SocialHubScreen());
                 return true;
             }
         }else if(rightTab<0){
